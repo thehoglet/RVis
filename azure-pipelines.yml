@@ -76,23 +76,23 @@ steps:
 - task: BatchScript@1
   inputs:
     filename: 'prepare_release.bat'
-    arguments: '$(AppVer)'
+    arguments: '$(AppVer) $(Build.ArtifactStagingDirectory)'
 
-# - task: ArchiveFiles@2
-#   inputs:
-#     rootFolderOrFile: 'RVis_v$(AppVer)'
-#     includeRootFolder: true
-#     archiveType: 'zip'
-#     archiveFile: '$(Build.ArtifactStagingDirectory)/RVis_v$(AppVer).zip'
-#     replaceExistingArchive: true
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/$(rid32)/RVis_v$(AppVer)'
+    includeRootFolder: true
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/RVis_v$(AppVer).zip'
+    replaceExistingArchive: true
 
-# - task: ArchiveFiles@2
-#   inputs:
-#     rootFolderOrFile: 'RVis_v$(AppVer)_x64'
-#     includeRootFolder: true
-#     archiveType: 'zip'
-#     archiveFile: '$(Build.ArtifactStagingDirectory)/RVis_v$(AppVer)_x64.zip'
-#     replaceExistingArchive: true
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/$(rid64)/RVis_v$(AppVer)'
+    includeRootFolder: true
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/RVis_v$(AppVer)_x64.zip'
+    replaceExistingArchive: true
 
 #- task: GitHubRelease@1
 #  inputs:
