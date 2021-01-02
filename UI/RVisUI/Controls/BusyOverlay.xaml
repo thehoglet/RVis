@@ -1,0 +1,107 @@
+﻿<UserControl x:Class="RVisUI.Controls.BusyOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:wpf="clr-namespace:RVisUI.Wpf;assembly=RVisUI.Wpf"
+             xmlns:swc="clr-namespace:System.Windows.Controls;assembly=PresentationFramework"
+             x:Name="_parent"
+             mc:Ignorable="d" 
+             d:DesignHeight="768" 
+             d:DesignWidth="1366"
+             >
+
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <swc:BooleanToVisibilityConverter x:Key="b2vc"/>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <UserControl.Background>
+    <SolidColorBrush Opacity="0.8" Color="DarkGray"/>
+  </UserControl.Background>
+
+  <Grid DataContext="{Binding ElementName=_parent}">
+
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition/>
+      <ColumnDefinition/>
+    </Grid.ColumnDefinitions>
+
+    <Grid.RowDefinitions>
+      <RowDefinition Height="3*"/>
+      <RowDefinition Height="100"/>
+      <RowDefinition Height="2*"/>
+    </Grid.RowDefinitions>
+
+    <md:Card Grid.Column="0" 
+             Grid.Row="0"
+             VerticalAlignment="Center" 
+             HorizontalAlignment="Center"
+             md:ShadowAssist.ShadowDepth="Depth4"
+             UniformCornerRadius="12"
+             Margin="20, 0"
+             Padding="32">
+
+      <TextBlock Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                 TextWrapping="Wrap" 
+                 Text="{Binding BusyWith}"
+                 />
+    
+    </md:Card>
+
+    <ScrollViewer x:Name="_svMessages"
+                  Grid.Column="1" 
+                  Grid.Row="0" 
+                  HorizontalScrollBarVisibility="Hidden" 
+                  VerticalScrollBarVisibility="Hidden"
+                  Margin="50"
+                  >
+
+      <TextBlock x:Name="_tbMessages"
+                 TextWrapping="Wrap"
+                 />
+
+    </ScrollViewer>
+
+    <ProgressBar Grid.Column="0" 
+                 Grid.Row="1" 
+                 Grid.ColumnSpan="2" 
+                 IsIndeterminate="True" 
+                 Value="0"
+                 Height="50"
+                 Width="50"
+                 Margin="100,0,100,0"
+                 Style="{StaticResource MaterialDesignCircularProgressBar}"
+                 />
+
+    <StackPanel Grid.Column="0"
+                Grid.Row="2"
+                Grid.ColumnSpan="2"
+                VerticalAlignment="Center" 
+                HorizontalAlignment="Center"
+                Visibility="{Binding EnableCancel, Converter={StaticResource b2vc}}"
+                >
+
+      <Button Grid.Column="0" 
+              Grid.Row="2" 
+              Grid.ColumnSpan="2"
+              Height="Auto" 
+              Width="Auto" 
+              Command="{Binding Cancel}"
+              >
+        <StackPanel Orientation="Horizontal" Margin="0">
+          <md:PackIcon VerticalAlignment="Center"
+                       Margin="0 0 6 0"
+                       Kind="Cancel" 
+                       />
+          <TextBlock>CANCEL</TextBlock>
+        </StackPanel>
+      </Button>
+
+    </StackPanel>
+
+  </Grid>
+
+</UserControl>

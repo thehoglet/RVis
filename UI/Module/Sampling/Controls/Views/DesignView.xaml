@@ -1,0 +1,124 @@
+﻿<UserControl x:Class="Sampling.Controls.Views.DesignView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Sampling"
+             xmlns:design="clr-namespace:Sampling.Design"
+             xmlns:wpf="clr-namespace:RVisUI.Wpf;assembly=RVisUI.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="768" d:DesignWidth="1366"
+             d:DataContext="{d:DesignInstance Type=design:DesignViewModel, IsDesignTimeCreatable=True}"
+             >
+
+  <UserControl.Resources>
+    <ResourceDictionary>
+
+      <ResourceDictionary.MergedDictionaries>
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Light.xaml"/>
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Light.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignColors;component/Themes/Recommended/Primary/MaterialDesignColor.DeepPurple.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignColors;component/Themes/Recommended/Accent/MaterialDesignColor.Lime.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Fonts.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Flyout.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/RVisUI.AppInf;component/Resources/HelpButton.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <Grid>
+
+    <Button Style="{StaticResource HelpButtonStyle}"
+            VerticalAlignment="Top"
+            HorizontalAlignment="Right"
+            Margin="20"
+            ToolTip="Help about method" 
+            Tag="rvis/modules/sampling/design/"
+            />
+
+    <StackPanel Width="500"
+                VerticalAlignment="Center">
+
+        <GroupBox Header="DESIGN">
+
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition />
+              <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock VerticalAlignment="Center"
+                       HorizontalAlignment="Center"
+                       Text="{Binding CreatedOn, StringFormat='Created on {0:yyyy-MM-dd HH:mm:ss}', TargetNullValue='Created on ?'}"
+                       />
+
+            <StackPanel Grid.Column="1">
+              <Button HorizontalAlignment="Center" 
+                      Margin="10 10 10 5"
+                      Command="{Binding CreateDesign}" 
+                      Content="Create Design"
+                      />
+              <Button HorizontalAlignment="Center"
+                      Margin="10 5 10 10"
+                      Command="{Binding UnloadDesign}" 
+                      Content="Unload Design"
+                      />
+            </StackPanel>
+
+          </Grid>
+
+        </GroupBox>
+
+        <GroupBox Margin="0 10 0 0" 
+                  Header="ACQUIRE OUTPUTS" 
+                  IsEnabled="{Binding CanUnloadDesign}">
+
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel VerticalAlignment="Center">
+              <ProgressBar Margin="10"
+                           Value="{Binding AcquireOutputsProgress, Mode=OneWay}"
+                           />
+
+              <TextBlock Grid.Column="1"
+                         HorizontalAlignment="Center"
+                         Margin="10">
+                <TextBlock.Text>
+                  <MultiBinding StringFormat="{}{0} / {1}">
+                    <Binding Path="NOutputsAcquired" />
+                    <Binding Path="NOutputsToAcquire" />
+                  </MultiBinding>
+                </TextBlock.Text>
+              </TextBlock>
+
+            </StackPanel>
+
+            <StackPanel Grid.Column="1">
+              <Button Margin="10"
+                      Content="Start" 
+                      Command="{Binding AcquireOutputs}"
+                      />
+              <Button Grid.Column="1" 
+                      Margin="10"
+                      Content="Stop" 
+                      Command="{Binding CancelAcquireOutputs}"
+                      />
+            </StackPanel>
+
+          </Grid>
+
+        </GroupBox>
+
+      </StackPanel>
+
+  </Grid>
+
+</UserControl>

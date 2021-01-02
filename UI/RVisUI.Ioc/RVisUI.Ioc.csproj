@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RVisUI.Mvvm\RVisUI.Mvvm.csproj" />
+    <ProjectReference Include="..\RVisUI.WPF\RVisUI.Wpf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommonServiceLocator" Version="2.0.5" />
+    <PackageReference Include="Ninject" Version="3.3.4" />
+  </ItemGroup>
+
+</Project>

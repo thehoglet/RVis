@@ -1,0 +1,141 @@
+﻿<UserControl x:Class="Sampling.Controls.Views.OutputsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:oxy="http://oxyplot.org/wpf"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:wpf="clr-namespace:RVisUI.Wpf;assembly=RVisUI.Wpf"
+             xmlns:design="clr-namespace:Sampling.Design"
+             xmlns:impl="clr-namespace:Sampling.Controls.Views.Impl"
+             xmlns:swc="clr-namespace:System.Windows.Controls;assembly=PresentationFramework"
+             mc:Ignorable="d" 
+             d:DesignHeight="768" d:DesignWidth="1366"
+             d:DataContext="{d:DesignInstance Type=design:OutputsViewModel, IsDesignTimeCreatable=True}"
+             >
+
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Light.xaml"/>
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Light.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignColors;component/Themes/Recommended/Primary/MaterialDesignColor.DeepPurple.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignColors;component/Themes/Recommended/Accent/MaterialDesignColor.Lime.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Fonts.xaml" />
+        <wpf:DesignModeResourceDictionary DesignModeSource="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Flyout.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+
+      <swc:BooleanToVisibilityConverter x:Key="b2vc"/>
+
+      <wpf:BooleanToVisibilityConverter 
+        x:Key="ib2vc" 
+        True="Hidden" 
+        False="Visible" 
+        />
+
+      <wpf:BooleanToVisibilityConverter 
+        x:Key="nb2vc" 
+        True="Visible" 
+        False="Hidden" 
+        />
+
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <Grid>
+
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition/>
+      <ColumnDefinition Width="Auto"/>
+    </Grid.ColumnDefinitions>
+
+    <oxy:PlotView x:Name="_plotView" 
+                  Model="{Binding Outputs}" 
+                  Background="Transparent"
+                  />
+
+    <StackPanel Orientation="Horizontal"
+                VerticalAlignment="Top"
+                HorizontalAlignment="Right"
+                Margin="0,25,30,0"
+                >
+
+      <Button ToolTip="Toggle line/scatter"
+              Command="{Binding ToggleSeriesType}"
+              >
+        <Button.Style>
+          <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFloatingActionMiniLightButton}">
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Content">
+              <Setter.Value>
+                <md:PackIcon Kind="GamepadCircle"
+                             Height="12"
+                             Width="12" 
+                             />
+              </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding IsSeriesTypeLine}" Value="True">
+                <Setter Property="Content">
+                  <Setter.Value>
+                    <md:PackIcon Kind="ChartLineVariant"
+                                 Height="12"
+                                 Width="12" 
+                                 />
+                  </Setter.Value>
+                </Setter>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Button.Style>
+      </Button>
+
+      <Button Height="16"
+              Width="16"
+              Margin="5 0 0 0"
+              Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
+              ToolTip="Reset axes" 
+              Command="{Binding ResetAxes}"
+              >
+        <md:PackIcon Kind="Refresh"
+                     Height="12"
+                     Width="12" 
+                     />
+      </Button>
+
+    </StackPanel>
+
+    <StackPanel Grid.Column="1">
+
+      <GroupBox Header="Output">
+        <ComboBox ItemsSource="{Binding OutputNames}" 
+                  SelectedIndex="{Binding SelectedOutputName}"
+                  MinWidth="200"
+                  Margin="5"
+                  />
+      </GroupBox>
+
+      <TabControl Grid.Row="1"
+                  Margin="0,10,0,0"
+                  Height="400"
+                  >
+        <TabItem Header="Sample" 
+                 DataContext="{Binding OutputsSelectedSampleViewModel}">
+          <impl:OutputsSelectedSampleView />
+        </TabItem>
+        <TabItem Header="Filter"
+                 DataContext="{Binding OutputsFilteredSamplesViewModel}">
+          <impl:OutputsFilteredSamplesView/>
+        </TabItem>
+      </TabControl>
+
+    </StackPanel>
+
+  </Grid>
+
+</UserControl>
