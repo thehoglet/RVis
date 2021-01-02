@@ -21,21 +21,21 @@ steps:
   inputs:
     command: build
     projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) /p:DefineConstants="IS_PIPELINES_BUILD" -r $(rid32)'
+    arguments: '--configuration $(buildConfiguration) /p:DefineConstants=IS_PIPELINES_BUILD -r $(rid32)'
 
 - task: DotNetCoreCLI@2
   displayName: 'Build 64-bit'
   inputs:
     command: build
     projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) /p:DefineConstants="IS_PIPELINES_BUILD" -r $(rid64)'
+    arguments: '--configuration $(buildConfiguration) /p:DefineConstants=IS_PIPELINES_BUILD -r $(rid64)'
 
 - task: DotNetCoreCLI@2
   displayName: 'Test'
   inputs:
     command: test
     projects: 'Test/**/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'
+    arguments: '--configuration $(buildConfiguration) --runtime $(rid32) --no-build'
 
 - task: DotNetCoreCLI@2
   displayName: 'Publish RVisUI 32-bit'
