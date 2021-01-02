@@ -38,6 +38,7 @@ steps:
     arguments: '--configuration $(buildConfiguration) --runtime $(rid32) --no-build'
 
 - task: PowerShell@2
+  displayName: 'Set app version variables'
   inputs:
     filePath: 'SetAppVerVariables.ps1'
 
