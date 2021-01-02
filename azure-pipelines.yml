@@ -21,14 +21,14 @@ steps:
   inputs:
     command: build
     projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) -r $(rid32)'
+    arguments: '--configuration $(buildConfiguration) /p:DefineConstants="IS_PIPELINES_BUILD" -r $(rid32)'
 
 - task: DotNetCoreCLI@2
   displayName: 'Build 64-bit'
   inputs:
     command: build
     projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) -r $(rid64)'
+    arguments: '--configuration $(buildConfiguration) /p:DefineConstants="IS_PIPELINES_BUILD" -r $(rid64)'
 
 - task: DotNetCoreCLI@2
   displayName: 'Test'
