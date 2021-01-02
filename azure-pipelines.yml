@@ -31,10 +31,43 @@ steps:
     arguments: '--configuration $(buildConfiguration) -r $(rid64)'
 
 - task: DotNetCoreCLI@2
+  displayName: 'Test'
   inputs:
     command: test
     projects: 'Test/**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) -r $(rid32)'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish RVisUI 32-bit'
+  inputs:
+    command: publish
+    publishWebProjects: False
+    arguments: 'UI\RVisUI\RVisUI.csproj --configuration $(BuildConfiguration) /p:SelfContained=true -r $(rid32) --output $(Build.ArtifactStagingDirectory)/$(rid32)/RVis'
+    zipAfterPublish: False
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish RVis server 32-bit'
+  inputs:
+    command: publish
+    publishWebProjects: False
+    arguments: 'R\RVis.Server\RVis.Server.csproj --configuration $(BuildConfiguration) /p:SelfContained=true -r $(rid32) --output $(Build.ArtifactStagingDirectory)/$(rid32)/RVis/R'
+    zipAfterPublish: False
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish RVisUI 64-bit'
+  inputs:
+    command: publish
+    publishWebProjects: False
+    arguments: 'UI\RVisUI\RVisUI.csproj --configuration $(BuildConfiguration) /p:SelfContained=true -r $(rid64) --output $(Build.ArtifactStagingDirectory)/$(rid64)/RVis'
+    zipAfterPublish: False
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish RVis server 64-bit'
+  inputs:
+    command: publish
+    publishWebProjects: False
+    arguments: 'R\RVis.Server\RVis.Server.csproj --configuration $(BuildConfiguration) /p:SelfContained=true -r $(rid64) --output $(Build.ArtifactStagingDirectory)/$(rid64)/RVis/R'
+    zipAfterPublish: False
 
 - task: PowerShell@2
   inputs:
