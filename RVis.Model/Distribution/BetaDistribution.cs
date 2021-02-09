@@ -41,7 +41,13 @@ namespace RVis.Model
     public bool CanTruncate => true;
 
     public bool IsTruncated => !IsNegativeInfinity(Lower) || !IsPositiveInfinity(Upper);
-    
+
+    IDistribution IDistribution.WithLowerUpper(double lower, double upper) =>
+      WithLowerUpper(lower, upper);
+
+    public BetaDistribution WithLowerUpper(double lower, double upper) => 
+      new BetaDistribution(Alpha, Beta, lower, upper);
+
     public bool IsConfigured => !IsNaN(Alpha) && !IsNaN(Beta);
 
     public double Mean

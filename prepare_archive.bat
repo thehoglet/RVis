@@ -73,22 +73,22 @@
 )
 
 @mkdir .\rvis_%rid%\RVis\module\estimation
-@copy UI\module\Estimation\bin\Release\net5.0-windows\Estimation.dll .\rvis_%rid%\RVis\module\estimation\ >nul
+@copy UI\module\Estimation\bin\Release\net5.0-windows\%rid%\Estimation.dll .\rvis_%rid%\RVis\module\estimation\ >nul
 
 @mkdir .\rvis_%rid%\RVis\module\evidence
-@copy UI\module\Evidence\bin\Release\net5.0-windows\Evidence.dll .\rvis_%rid%\RVis\module\evidence\ >nul
+@copy UI\module\Evidence\bin\Release\net5.0-windows\%rid%\Evidence.dll .\rvis_%rid%\RVis\module\evidence\ >nul
 
 @mkdir .\rvis_%rid%\RVis\module\plot
-@copy UI\module\Plot\bin\Release\net5.0-windows\Plot.dll .\rvis_%rid%\RVis\module\plot\ >nul
+@copy UI\module\Plot\bin\Release\net5.0-windows\%rid%\Plot.dll .\rvis_%rid%\RVis\module\plot\ >nul
 
 @mkdir .\rvis_%rid%\RVis\module\sampling
-@copy UI\module\Sampling\bin\Release\net5.0-windows\Sampling.dll .\rvis_%rid%\RVis\module\sampling\ >nul
+@copy UI\module\Sampling\bin\Release\net5.0-windows\%rid%\Sampling.dll .\rvis_%rid%\RVis\module\sampling\ >nul
 
 @mkdir .\rvis_%rid%\RVis\module\sensitivity
-@copy UI\module\Sensitivity\bin\Release\net5.0-windows\Sensitivity.dll .\rvis_%rid%\RVis\module\sensitivity\ >nul
+@copy UI\module\Sensitivity\bin\Release\net5.0-windows\%rid%\Sensitivity.dll .\rvis_%rid%\RVis\module\sensitivity\ >nul
 
-@if exist rvis.zip (
-  @del rvis.zip
+@if exist RVis_%rid%.zip (
+  @del RVis_%rid%.zip
 )
 
 @if not exist "%ProgramFiles%\7-zip\7z.exe" (
@@ -96,7 +96,7 @@
   @exit /b 1
 )
 
-"%ProgramFiles%\7-zip\7z.exe" a rvis.zip %cd%\rvis_%rid%\RVis\
+"%ProgramFiles%\7-zip\7z.exe" a RVis_%rid%.zip %cd%\rvis_%rid%\RVis\
 
 @rmdir /Q /S rvis_%rid%
 

@@ -1,10 +1,15 @@
 ﻿using LanguageExt;
+using Nett;
+using Ninject;
 using RVis.Base;
 using RVis.Model;
 using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Reactive.Subjects;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RVisUI.Model
 {
@@ -23,6 +28,7 @@ namespace RVisUI.Model
     string ModuleConfiguration { get; set; }
     int RThrottlingUseCores { get; set; }
     string PathToSimLibrary { get; set; }
+    string PathToRunControlDrop { get; set; }
     double Zoom { get; set; }
     T Get<T>(string name);
     void Set<T>(string name, T value);
@@ -50,7 +56,6 @@ namespace RVisUI.Model
   {
     string? Status { get; set; }
     string? MainWindowTitle { get; set; }
-    void Initialize(string[] args);
     Option<Simulation> Target { get; set; }
     IObservable<Option<Simulation>> Simulation { get; }
     ISimData SimData { get; }
@@ -61,11 +66,12 @@ namespace RVisUI.Model
     Arr<(string ID, string DisplayName, string? DisplayIcon, object View, object ViewModel)> UIComponents { get; set; }
     (string ID, string DisplayName, string? DisplayIcon, object View, object ViewModel) ActiveUIComponent { get; set; }
     object? ActiveViewModel { get; set; }
-    Arr<ModuleInfo> LoadModules();
+    Arr<IRVisExtensibility> GetServices(bool rebind);
     string? ExtraModulePath { get; set; }
     Arr<(string Name, string Value)> RVersion { get; set; }
     Arr<(string Package, string Version)> InstalledRPackages { get; set; }
     bool GetStartUpArg(StartUpOption startUpOption, out string? arg);
+    RunControl? RunControl { get; }
   }
 
   public interface IReactiveSafeInvoke
@@ -77,6 +83,7 @@ namespace RVisUI.Model
 
   public interface IAppService
   {
+    IKernel Factory { get; }
     IObservable<long> SecondInterval { get; }
     bool CheckAccess();
     bool ShowDialog(object view, object viewModel, object? parentViewModel);
@@ -96,10 +103,26 @@ namespace RVisUI.Model
     Action<T> SafeInvoke<T>(Action<T> action, [CallerMemberName]string subject = "");
   }
 
+  public interface IRunControlTask
+  {
+    string Name { get; }
+    Task RunAsync(
+      RunControlConfiguration configuration,
+      Simulation simulation,
+      string pathToWorkingDirectory,
+      ISubject<(DateTime Timestamp, string Message)> messages,
+      CancellationToken cancellationToken
+      );
+  }
+
   public interface IRVisExtensibility
   {
     object GetView();
     object GetViewModel();
+    IRunControlTask GetRunControlTask(
+      string type, 
+      TomlTable taskSpec
+      );
   }
 
   public interface ITaskRunnerContainer

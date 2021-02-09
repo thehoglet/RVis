@@ -47,6 +47,13 @@ namespace Plot
     }
     private Arr<string> _mruElementNames;
 
+    public string? SelectedInsetElementName
+    {
+      get => _selectedInsetElementName;
+      set => this.RaiseAndSetIfChanged(ref _selectedInsetElementName, value, PropertyChanged);
+    }
+    private string? _selectedInsetElementName;
+
     public Arr<string> SupplementaryElementNames
     {
       get => _supplementaryElementNames;

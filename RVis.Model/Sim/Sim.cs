@@ -1,8 +1,6 @@
 ﻿using Nett;
 using RVis.Base.Extensions;
-using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 
 namespace RVis.Model
 {
@@ -14,17 +12,7 @@ namespace RVis.Model
     public static TSimConfig ReadConfigFromFile(string pathToFile) =>
       Toml.ReadFile<TSimConfig>(pathToFile);
 
-    public static void SerializeConfig(SimConfig config, Stream stream) =>
-#pragma warning disable SYSLIB0011 // Type or member is obsolete
-      new BinaryFormatter().Serialize(stream, config);
-#pragma warning restore SYSLIB0011 // Type or member is obsolete
-
-    public static SimConfig DeserializeConfig(Stream stream) =>
-#pragma warning disable SYSLIB0011 // Type or member is obsolete
-      (SimConfig)new BinaryFormatter().Deserialize(stream);
-#pragma warning restore SYSLIB0011 // Type or member is obsolete
-
-    internal static SimInput FromToml(TSimInput input)
+    public static SimInput FromToml(TSimInput input)
     {
       var parameters = input.Parameters?.IsNullOrEmpty() == true
         ? default
@@ -34,7 +22,7 @@ namespace RVis.Model
       return new SimInput(parameters, input.IsDefault);
     }
 
-    internal static TSimConfig ToToml(SimConfig config)
+    public static TSimConfig ToToml(SimConfig config)
     {
       return new TSimConfig
       {
@@ -52,12 +40,12 @@ namespace RVis.Model
           Parameters = config.SimInput.SimParameters.IsEmpty
             ? default
             : config.SimInput.SimParameters.Map(p => new TSimParameter
-              {
-                Name = p.Name,
-                Value = p.Value,
-                Unit = p.Unit,
-                Description = p.Description
-              }).ToArray(),
+            {
+              Name = p.Name,
+              Value = p.Value,
+              Unit = p.Unit,
+              Description = p.Description
+            }).ToArray(),
           IsDefault = config.SimInput.IsDefault
         },
         Output = new TSimOutput
@@ -65,21 +53,21 @@ namespace RVis.Model
           Values = config.SimOutput.SimValues.IsEmpty
             ? default
             : config.SimOutput.SimValues.Map(v => new TSimValue
+            {
+              Name = v.Name,
+              Elements = v.SimElements.Map(e => new TSimElement
               {
-                Name = v.Name,
-                Elements = v.SimElements.Map(e => new TSimElement
-                {
-                  Name = e.Name,
-                  IsIndependentVariable = e.IsIndependentVariable,
-                  Unit = e.Unit,
-                  Description = e.Description
-                }).ToArray()
+                Name = e.Name,
+                IsIndependentVariable = e.IsIndependentVariable,
+                Unit = e.Unit,
+                Description = e.Description
               }).ToArray()
+            }).ToArray()
         }
       };
     }
 
-    internal static SimConfig FromToml(TSimConfig config)
+    public static SimConfig FromToml(TSimConfig config)
     {
       var code = new SimCode(config.Code?.File, config.Code?.Exec, config.Code?.Formal);
 
@@ -105,11 +93,11 @@ namespace RVis.Model
       var output = new SimOutput(values);
 
       return new SimConfig(
-        config.Title, 
-        config.Description, 
-        config.ImportedOn, 
-        code, 
-        input, 
+        config.Title,
+        config.Description,
+        config.ImportedOn,
+        code,
+        input,
         output
         );
     }

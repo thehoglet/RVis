@@ -191,14 +191,14 @@ namespace RVisUI.Mvvm
 
     private void HandleBusyCancel()
     {
-      _taskRunners
+      var cancelableTasks = _taskRunners
         .Where(kvp => kvp.Key.CanCancelTask)
         .Select(kvp => new { kvp.Value.AddedOn, kvp.Key })
         .OrderByDescending(a => a.AddedOn);
 
-      if (!_taskRunners.Any()) return;
+      if (!cancelableTasks.Any()) return;
 
-      _taskRunners.First().Key.HandleCancelTask();
+      cancelableTasks.First().Key.HandleCancelTask();
     }
 
     private void ObserveSimulation(Option<Simulation> simulation)

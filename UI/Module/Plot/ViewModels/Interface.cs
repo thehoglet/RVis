@@ -2,19 +2,12 @@
 using OxyPlot;
 using RVis.Data;
 using RVis.Model;
+using RVisUI.AppInf;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 
 namespace Plot
 {
-  public interface ISelectableItemViewModel
-  {
-    string Label { get; }
-    string SortKey { get; }
-    ICommand Select { get; }
-    bool Use { get; set; }
-  }
-
   public interface IDepVarConfigViewModel
   {
     ICommand ToggleView { get; }
@@ -24,6 +17,9 @@ namespace Plot
 
     ObservableCollection<ISelectableItemViewModel> MRUElements { get; }
     ObservableCollection<ISelectableItemViewModel> LRUElements { get; }
+
+    Arr<string> InsetOptions { get; }
+    int SelectedInsetOption { get; set; }
 
     Arr<ISelectableItemViewModel> SupplementaryElements { get; set; }
     Arr<ISelectableItemViewModel> Observations { get; set; }

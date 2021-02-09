@@ -125,8 +125,6 @@ namespace RVis.Server
 
     public override Task<PingReply> Ping(PingRequest request, ServerCallContext context)
     {
-      _logger.LogInformation("Ping from {ProcessId}", request.Pid);
-
       return Task.FromResult(new PingReply { Payload = new PingPayload { Pid = Environment.ProcessId } });
     }
 

@@ -6,6 +6,7 @@ namespace Plot
   {
     public string? SelectedElementName { get; set; }
     public string[]? MRUElementNames { get; set; }
+    public string? SelectedInsetElementName { get; set; }
     public string[]? SupplementaryElementNames { get; set; }
     public Dictionary<string, string[]>? InactiveSupplementaryElementNames { get; set; }
     public string[]? ObservationsReferences { get; set; }

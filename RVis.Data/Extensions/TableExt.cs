@@ -1,12 +1,43 @@
-﻿using System;
+﻿using LanguageExt;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using static RVis.Base.Check;
+using FxDataTable = System.Data.DataTable;
 
 namespace RVis.Data.Extensions
 {
   public static class TableExt
   {
+    public static FxDataTable ToFxDataTable(this NumDataTable rvDataTable)
+    {
+      var fxDataTable = new FxDataTable(rvDataTable.Name);
+      
+      rvDataTable.ColumnNames.Iter(
+        cn => fxDataTable.Columns.Add(cn, typeof(double))
+        );
+      
+      for (var i = 0; i < rvDataTable.NRows; ++i)
+      {
+        var row = rvDataTable.GetRow<object>(i);
+        fxDataTable.Rows.Add(row);
+      }
+
+      return fxDataTable;
+    }
+
+    public static T[] GetRow<T>(this IDataTable dataTable, int rowIndex)
+    {
+      RequireTrue(rowIndex < dataTable.NRows);
+
+      var data = dataTable.DataColumns
+        .Select(dc => Convert.ChangeType(dc[rowIndex], typeof(T)))
+        .Cast<T>();
+
+      return data.ToArray();
+    }
+
     public static IDataColumn ToDataColumn(this Array data, string name)
     {
       var elementType = data.GetType().GetElementType();

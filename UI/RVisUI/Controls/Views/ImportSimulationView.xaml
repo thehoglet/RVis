@@ -14,6 +14,14 @@
              d:DataContext="{d:DesignInstance Type=mvvmd:ImportSimulationViewModel, IsDesignTimeCreatable=True}"
              >
 
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/RVisUI.AppInf;component/Resources/HelpButton.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
   <AdornerDecorator>
     <wpf:AdornedControl>
       <wpf:AdornedControl.Style>

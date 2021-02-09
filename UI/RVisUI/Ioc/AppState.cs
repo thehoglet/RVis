@@ -20,6 +20,16 @@ namespace RVisUI.Ioc
       MainWindowTitle = _assemblyTitle;
     }
 
+    internal void Initialize(string[] args)
+    {
+      ProcessStartUpArgs(args);
+
+      _appService.RVisServerPool.RequestServer().Match(
+        StartOperationsAsync,
+        CurtailOperationsAsync
+        );
+    }
+
     public string? Status
     {
       get => _status;
@@ -51,6 +61,13 @@ namespace RVisUI.Ioc
       set => this.RaiseAndSetIfChanged(ref _installedRPackages, value, PropertyChanged);
     }
     private Arr<(string Package, string Version)> _installedRPackages;
+
+    public RunControl? RunControl 
+    { 
+      get => _runControl;
+      set => this.RaiseAndSetIfChanged(ref _runControl, value, PropertyChanged);
+    }
+    private RunControl? _runControl;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

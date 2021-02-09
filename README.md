@@ -14,7 +14,7 @@ RVis is a desktop application for Microsoft Windows. You will need:
 RVis depends on various R packages to provide functionality:
 
 - To use the sensitivity analysis feature in RVis, you will need to install the R [sensitivity](https://cran.r-project.org/web/packages/sensitivity/) package
-- The MCMC feature in RVis can provide diagnostics, for which you will need to install the [coda](https://cran.r-project.org/web/packages/coda/) package 
+- The MCMC feature in RVis can provide diagnostics, for which you will need to install the [coda](https://cran.r-project.org/web/packages/coda/) package
 - To use all of the features of the sampling module, you will need to install the [dicedesign](https://cran.r-project.org/web/packages/DiceDesign/) and [mc2d](https://cran.r-project.org/web/packages/mc2d/) packages.
 
 ## Installation

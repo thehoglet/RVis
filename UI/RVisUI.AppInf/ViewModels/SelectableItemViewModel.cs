@@ -4,20 +4,20 @@ using System;
 using System.ComponentModel;
 using System.Windows.Input;
 
-namespace Plot
+namespace RVisUI.AppInf
 {
   public sealed class SelectableItemViewModel<T> : ISelectableItemViewModel, INotifyPropertyChanged
   {
-    public SelectableItemViewModel(T item, string label, string sortKey, ICommand select, bool use)
+    public SelectableItemViewModel(T item, string label, string sortKey, ICommand select, bool isSelected)
     {
       Item = item;
       Label = label;
       SortKey = sortKey;
       Select = select;
-      _use = use;
+      _isSelected = isSelected;
 
       this
-        .ObservableForProperty(vm => vm.Use)
+        .ObservableForProperty(vm => vm.IsSelected)
         .Subscribe(_ => select?.Execute(this));
     }
 
@@ -29,12 +29,12 @@ namespace Plot
 
     public ICommand Select { get; }
 
-    public bool Use
+    public bool IsSelected
     {
-      get => _use;
-      set => this.RaiseAndSetIfChanged(ref _use, value, PropertyChanged);
+      get => _isSelected;
+      set => this.RaiseAndSetIfChanged(ref _isSelected, value, PropertyChanged);
     }
-    private bool _use;
+    private bool _isSelected;
 
     public event PropertyChangedEventHandler? PropertyChanged;
   }

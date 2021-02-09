@@ -18,8 +18,6 @@ namespace RVis.Server
 
       var logger = loggerFactory.CreateLogger<ROpsService>();
 
-      logger.LogError("hello");
-
       var server = new GrpcDotNetNamedPipes.NamedPipeServer($"rvis.svr.pipe.{id}");
       R.ROps.BindService(server.ServiceBinder, new ROpsService(logger));
       server.Start();

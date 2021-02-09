@@ -1,10 +1,11 @@
 # Beta Release
 
-Changes in v0.12:
+Changes in v0.13:
 
-- Code base upgraded to .NET v5
-- In Sampling module, added facility for taking subset of parameter values based on output ranges
+- OxyPlot downgraded to v2.0
 
-Issues fixed in v0.12: [#17](https://github.com/GMPtk/RVis/issues/17)
+__ATTENTION!__ The 64-bit build will hang if used with R v4.0.3 (monitor issues in the [R.NET](https://github.com/rdotnet/rdotnet) repository for progress and resolution).
+
+Issues fixed in v0.13: fault in Lowry plotter; async start-up null reference assertion
 
 Please submit bug reports, feature requests and other technical matters to the [issue tracker](https://github.com/GMPtk/RVis/issues) in this repository.

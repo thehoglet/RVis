@@ -24,6 +24,9 @@ namespace RVis.Model
 
     public bool IsTruncated => false;
 
+    public IDistribution WithLowerUpper(double lower, double upper) =>
+      this;
+
     public bool IsConfigured => !IsNaN(Value);
 
     public double Mean

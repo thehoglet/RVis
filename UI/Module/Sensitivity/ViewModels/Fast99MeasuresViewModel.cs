@@ -2,7 +2,6 @@
 using OxyPlot;
 using OxyPlot.Annotations;
 using OxyPlot.Axes;
-using OxyPlot.Legends;
 using OxyPlot.Series;
 using ReactiveUI;
 using RVis.Base.Extensions;
@@ -21,6 +20,7 @@ using System.Windows.Input;
 using static LanguageExt.Prelude;
 using static RVis.Base.Check;
 using static RVis.Base.Extensions.NumExt;
+using static System.Double;
 using static System.Globalization.CultureInfo;
 using static System.Math;
 
@@ -61,13 +61,11 @@ namespace Sensitivity
         this.ObservableForProperty(vm => vm.RankedParameterViewModels, _ => RankedParameterViewModels.Count > 0)
         );
 
-      PlotModel = new PlotModel();
-
-      PlotModel.Legends.Add(new Legend
+      PlotModel = new PlotModel()
       {
         LegendPosition = LegendPosition.RightMiddle,
         LegendPlacement = LegendPlacement.Outside
-      });
+      };
 
       PlotModel.Axes.Add(new LinearAxis
       {
@@ -88,11 +86,9 @@ namespace Sensitivity
       };
       PlotModel.Annotations.Add(_annotation);
 
-#pragma warning disable CS0618 // Type or member is obsolete
       PlotModel.MouseDown += HandlePlotModelMouseDown;
       PlotModel.MouseMove += HandlePlotModelMouseMove;
       PlotModel.MouseUp += HandlePlotModelMouseUp;
-#pragma warning restore CS0618 // Type or member is obsolete
 
       PlotModel.ApplyThemeToPlotModelAndAxes();
 
@@ -213,7 +209,7 @@ namespace Sensitivity
     private string? _xBeginText;
 
     public double? XBegin =>
-      double.TryParse(_xBeginText, out double d) ? d : default(double?);
+      TryParse(_xBeginText, out double d) ? d : default(double?);
 
     public string? XEndText
     {
@@ -223,7 +219,7 @@ namespace Sensitivity
     private string? _xEndText;
 
     public double? XEnd =>
-      double.TryParse(_xEndText, out double d) ? d : default(double?);
+      TryParse(_xEndText, out double d) ? d : default(double?);
 
     public Arr<IRankedParameterViewModel> RankedParameterViewModels
     {
@@ -568,11 +564,12 @@ namespace Sensitivity
         _moduleState.MeasuresState.SelectedOutputName!
         ];
 
-      var x = Range(0, firstOrder.Rows.Count)
+      var xs = Range(0, firstOrder.Rows.Count)
+        .SkipWhile(i => firstOrder.Rows[i].ItemArray.Cast<double>().Any(IsNaN))
         .Map(i => firstOrder.Rows[i].Field<double>(0))
         .ToArray();
-      _xMinimum = x.Min();
-      _xMaximum = x.Max();
+      _xMinimum = xs.Min();
+      _xMaximum = xs.Max();
 
       SetVerticalAxisTitle();
       PopulateSeries();
@@ -612,7 +609,7 @@ namespace Sensitivity
     {
       RequireFalse(Fast99MeasureType == Fast99MeasureType.None);
 
-      PlotModel.GetAxis(AxisPosition.Left).AssertNotNull().Title = _fast99MeasureNames[Fast99MeasureType];
+      PlotModel.GetAxis(AxisPosition.Left).Title = _fast99MeasureNames[Fast99MeasureType];
     }
 
     private void PopulateSeries()

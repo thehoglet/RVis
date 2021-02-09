@@ -1,5 +1,4 @@
 ﻿using LanguageExt;
-using System.Diagnostics.CodeAnalysis;
 
 namespace RVis.Model
 {
@@ -8,6 +7,7 @@ namespace RVis.Model
     DistributionType DistributionType { get; }
     bool CanTruncate { get; }
     bool IsTruncated { get; }
+    IDistribution WithLowerUpper(double lower, double upper);
     bool IsConfigured { get; }
     double Mean { get; }
     double Variance { get; }

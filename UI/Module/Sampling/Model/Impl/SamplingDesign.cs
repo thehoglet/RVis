@@ -64,6 +64,7 @@ namespace Sampling
 
     private const string DESIGN_FILE_NAME = "design.toml";
     private const string DESIGN_SAMPLES_FILE_NAME = "samples.csv";
+    private const string FILTER_CONFIG_FILE_NAME = "filter_config.toml";
 
     internal static void RemoveSamplingDesign(string pathToSamplingDesignsDirectory, DateTime createdOn)
     {
@@ -276,6 +277,57 @@ namespace Sampling
         instance.Samples,
         pathToSamplingDesignDirectory
         );
+    }
+
+    internal static void SaveFilterConfig(SamplingDesign instance, FilterConfig filterConfig, string pathToSamplingDesignsDirectory)
+    {
+      RequireDirectory(pathToSamplingDesignsDirectory);
+
+      var samplingDesignDirectory = instance.CreatedOn.ToDirectoryName();
+      var pathToSamplingDesignDirectory = Combine(pathToSamplingDesignsDirectory, samplingDesignDirectory);
+
+      RequireDirectory(pathToSamplingDesignDirectory);
+
+      var pathToFilterConfig = Combine(pathToSamplingDesignDirectory, FILTER_CONFIG_FILE_NAME);
+
+      var dto = filterConfig.ToDTO();
+
+      try
+      {
+        Toml.WriteFile(dto, pathToFilterConfig);
+      }
+      catch (Exception ex)
+      {
+        var message = $"Failed to save filter config to {pathToFilterConfig}";
+        Log.Error(ex, message);
+        throw new Exception(message);
+      }
+    }
+
+    internal static FilterConfig LoadFilterConfig(SamplingDesign instance, string pathToSamplingDesignsDirectory)
+    {
+      RequireDirectory(pathToSamplingDesignsDirectory);
+
+      var samplingDesignDirectory = instance.CreatedOn.ToDirectoryName();
+      var pathToSamplingDesignDirectory = Combine(pathToSamplingDesignsDirectory, samplingDesignDirectory);
+
+      RequireDirectory(pathToSamplingDesignDirectory);
+
+      var pathToFilterConfig = Combine(pathToSamplingDesignDirectory, FILTER_CONFIG_FILE_NAME);
+
+      if (!File.Exists(pathToFilterConfig)) return FilterConfig.Default;
+      
+      try
+      {
+        var dto = Toml.ReadFile<_FilterConfigDTO>(pathToFilterConfig);
+        return dto.FromDTO();
+      }
+      catch (Exception ex)
+      {
+        var message = $"Failed to load filter config from {pathToFilterConfig}";
+        Log.Error(ex, message);
+        throw new Exception(message);
+      }
     }
   }
 }

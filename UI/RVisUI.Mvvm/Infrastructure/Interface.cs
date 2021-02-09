@@ -2,11 +2,46 @@
 using RVis.Data;
 using RVis.Model;
 using RVisUI.Model;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 
 namespace RVisUI.Mvvm
 {
+  public interface ISimulationLabelViewModel
+  {
+    string? Name { get; set; }
+    string? Description { get; set; }
+    ICommand OK { get; }
+    ICommand Cancel { get; }
+    bool? DialogResult { get; set; }
+  }
+
+  public interface IAcatViewModel
+  {
+    string Name { get; }
+    bool IsReady { get; }
+    void Load(string pathToAcat);
+    bool CanConfigureSimulation { get; }
+    Option<Simulation> ConfigureSimulation(bool import);
+  }
+
+  public interface IAcatHostViewModel
+  {
+    bool IsVisible { get; }
+    ICommand Import { get; }
+    ICommand Load { get; }
+    bool CanConfigure { get; }
+    Arr<IAcatViewModel> AcatViewModels { get; }
+    IAcatViewModel? SelectedAcatViewModel { get; set; }
+  }
+
+  public interface IRunControlViewModel
+  {
+    bool IsVisible { get; }
+    ObservableCollection<Tuple<DateTime, string>> Messages { get; }
+  }
+
   public interface IFailedStartUpViewModel
   {
 
@@ -33,6 +68,9 @@ namespace RVisUI.Mvvm
     IImportSimulationViewModel ImportSimulationViewModel { get; }
     IImportMCSimViewModel ImportMCSimViewModel { get; }
     ILibraryViewModel LibraryViewModel { get; }
+    IRunControlViewModel RunControlViewModel { get; }
+    IAcatHostViewModel AcatHostViewModel { get; }
+    int SelectedIndex { get; set; }
   }
 
   public interface ILibraryViewModel

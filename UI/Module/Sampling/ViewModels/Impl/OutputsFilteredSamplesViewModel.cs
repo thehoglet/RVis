@@ -16,9 +16,15 @@ namespace Sampling
 {
   internal sealed class OutputsFilteredSamplesViewModel : IOutputsFilteredSamplesViewModel, INotifyPropertyChanged, IDisposable
   {
-    internal OutputsFilteredSamplesViewModel(IAppState appState, IAppService appService, ModuleState moduleState)
+    internal OutputsFilteredSamplesViewModel(
+      IAppState appState,
+      IAppService appService,
+      ModuleState moduleState,
+      SamplingDesigns samplingDesigns
+      )
     {
       _moduleState = moduleState;
+      _samplingDesigns = samplingDesigns;
 
       _simulation = appState.Target.AssertSome();
 
@@ -40,8 +46,13 @@ namespace Sampling
           )
         );
 
-      IsUnion = moduleState.FilteredSamplesState.IsUnion;
-      IsEnabled = moduleState.FilteredSamplesState.IsEnabled;
+      IsUnion = moduleState.SamplingDesign is null
+        ? moduleState.FilteredSamplesState.IsUnion
+        : _moduleState.FilterConfig.IsUnion;
+      IsEnabled = moduleState.SamplingDesign is null
+        ? moduleState.FilteredSamplesState.IsEnabled
+        : moduleState.FilterConfig.IsEnabled;
+
       PopulateOutputFilters();
 
       _reactiveSafeInvoke = appService.GetReactiveSafeInvoke();
@@ -53,6 +64,14 @@ namespace Sampling
           .Subscribe(
             _reactiveSafeInvoke.SuspendAndInvoke<object>(
               ObserveModuleStateOutputs
+              )
+            ),
+
+        moduleState
+          .ObservableForProperty(ms => ms.FilterConfig)
+          .Subscribe(
+            _reactiveSafeInvoke.SuspendAndInvoke<object>(
+              ObserveModuleStateFilterConfig
               )
             ),
 
@@ -209,104 +228,117 @@ namespace Sampling
 
     private void HandleToggleEnable(OutputsFilterViewModel outputsFilterViewModel)
     {
-      using (_reactiveSafeInvoke.SuspendedReactivity)
-      {
-        var filteredSampleStates = _moduleState.FilteredSamplesState.FilteredSampleStates;
+      using var _ = _reactiveSafeInvoke.SuspendedReactivity;
 
-        var index = filteredSampleStates.FindIndex(
-          fss => fss.GetHashCode() == outputsFilterViewModel.FilterHashCode
-          );
+      RequireNotNull(_moduleState.SamplingDesign);
 
-        RequireTrue(index.IsFound());
+      var filters = _moduleState.FilterConfig.Filters;
 
-        var filteredSampleState = filteredSampleStates[index];
-        filteredSampleState = filteredSampleState with { IsEnabled = !filteredSampleState.IsEnabled };
+      var index = filters.FindIndex(
+        fss => fss.GetHashCode() == outputsFilterViewModel.FilterHashCode
+        );
 
-        outputsFilterViewModel.FilterHashCode = filteredSampleState.GetHashCode();
+      RequireTrue(index.IsFound());
 
-        filteredSampleStates = filteredSampleStates.SetItem(index, filteredSampleState);
+      var filteredSampleState = filters[index];
+      filteredSampleState = filteredSampleState with { IsEnabled = !filteredSampleState.IsEnabled };
 
-        _moduleState.FilteredSamplesState.FilteredSampleStates = filteredSampleStates;
+      outputsFilterViewModel.FilterHashCode = filteredSampleState.GetHashCode();
 
-        RecompileOutputFilters();
-      }
+      filters = filters.SetItem(index, filteredSampleState);
+
+      _moduleState.FilterConfig = _moduleState.FilterConfig with { Filters = filters };
+      _samplingDesigns.SaveFilterConfig(_moduleState.SamplingDesign, _moduleState.FilterConfig);
+
+      RecompileOutputFilters();
     }
 
     private void HandleDelete(OutputsFilterViewModel outputsFilterViewModel)
     {
-      using (_reactiveSafeInvoke.SuspendedReactivity)
-      {
-        var filteredSampleStates = _moduleState.FilteredSamplesState.FilteredSampleStates;
+      using var _ = _reactiveSafeInvoke.SuspendedReactivity;
 
-        var index = filteredSampleStates.FindIndex(
-          fss => fss.GetHashCode() == outputsFilterViewModel.FilterHashCode
-          );
+      RequireNotNull(_moduleState.SamplingDesign);
 
-        RequireTrue(index.IsFound());
+      var filters = _moduleState.FilterConfig.Filters;
 
-        filteredSampleStates = filteredSampleStates.RemoveAt(index);
+      var index = filters.FindIndex(
+        fss => fss.GetHashCode() == outputsFilterViewModel.FilterHashCode
+        );
 
-        _moduleState.FilteredSamplesState.FilteredSampleStates = filteredSampleStates;
+      RequireTrue(index.IsFound());
 
-        RecompileOutputFilters();
+      filters = filters.RemoveAt(index);
 
-        OutputsFilterViewModels.Remove(outputsFilterViewModel);
-      }
+      _moduleState.FilterConfig = _moduleState.FilterConfig with { Filters = filters };
+      _samplingDesigns.SaveFilterConfig(_moduleState.SamplingDesign, _moduleState.FilterConfig);
+
+      RecompileOutputFilters();
+
+      OutputsFilterViewModels.Remove(outputsFilterViewModel);
     }
 
     private void HandleAddNewFilter()
     {
-      using (_reactiveSafeInvoke.SuspendedReactivity)
-      {
-        RequireNotNull(IndependentVariableValue);
-        RequireNotNull(IndependentVariableIndex);
-        RequireNotNullEmptyWhiteSpace(OutputName);
-        RequireNotNull(FromN);
-        RequireNotNull(ToN);
+      using var _ = _reactiveSafeInvoke.SuspendedReactivity;
 
-        var (from, to) = FromN > ToN
-          ? (ToN.Value, FromN.Value)
-          : (FromN.Value, ToN.Value);
+      RequireNotNull(IndependentVariableValue);
+      RequireNotNull(IndependentVariableIndex);
+      RequireNotNullEmptyWhiteSpace(OutputName);
+      RequireNotNull(FromN);
+      RequireNotNull(ToN);
+      RequireNotNull(_moduleState.SamplingDesign);
 
-        var filteredSampleState = new FilteredSampleState(
-          OutputName,
-          from,
-          to,
-          IndependentVariableIndex.Value,
-          IsEnabled: true
-          );
+      var (from, to) = FromN > ToN
+        ? (ToN.Value, FromN.Value)
+        : (FromN.Value, ToN.Value);
 
-        var filteredSampleStates = _moduleState.FilteredSamplesState.FilteredSampleStates;
-        filteredSampleStates = filteredSampleStates.Add(filteredSampleState);
-        _moduleState.FilteredSamplesState.FilteredSampleStates = filteredSampleStates;
+      var filteredSampleState = new Filter(
+        OutputName,
+        from,
+        to,
+        IndependentVariableIndex.Value,
+        IsEnabled: true
+        );
 
-        RecompileOutputFilters();
+      var filters = _moduleState.FilterConfig.Filters;
+      filters = filters.Add(filteredSampleState);
+      _moduleState.FilterConfig = _moduleState.FilterConfig with { Filters = filters };
+      _samplingDesigns.SaveFilterConfig(_moduleState.SamplingDesign, _moduleState.FilterConfig);
 
-        var element = _simulation.SimConfig.SimOutput.FindElement(OutputName).AssertSome();
+      RecompileOutputFilters();
 
-        OutputsFilterViewModels.Add(new OutputsFilterViewModel(
-          IndependentVariableName,
-          IndependentVariableValue.Value,
-          IndependentVariableUnit,
-          OutputName,
-          from,
-          to,
-          element.Unit,
-          _toggleEnable,
-          _delete
-          )
-        { IsEnabled = true, FilterHashCode = filteredSampleState.GetHashCode() });
+      var element = _simulation.SimConfig.SimOutput.FindElement(OutputName).AssertSome();
 
-        IndependentVariableValue = default;
-        FromN = default;
-        FromT = default;
-        ToN = default;
-        ToT = default;
-      }
+      OutputsFilterViewModels.Add(new OutputsFilterViewModel(
+        IndependentVariableName,
+        IndependentVariableValue.Value,
+        IndependentVariableUnit,
+        OutputName,
+        from,
+        to,
+        element.Unit,
+        _toggleEnable,
+        _delete
+        )
+      { IsEnabled = true, FilterHashCode = filteredSampleState.GetHashCode() });
+
+      IndependentVariableValue = default;
+      FromN = default;
+      FromT = default;
+      ToN = default;
+      ToT = default;
     }
 
     private void ObserveModuleStateOutputs(object _)
     {
+      PopulateOutputFilters();
+    }
+
+    private void ObserveModuleStateFilterConfig(object _)
+    {
+      IsEnabled = _moduleState.FilterConfig.IsEnabled;
+      IsUnion = _moduleState.FilterConfig.IsUnion;
+
       PopulateOutputFilters();
     }
 
@@ -336,19 +368,30 @@ namespace Sampling
 
     private void ObserveIsEnabled(object _)
     {
+      RequireNotNull(_moduleState.SamplingDesign);
+
+      _moduleState.FilterConfig = _moduleState.FilterConfig with { IsEnabled = _isEnabled };
+      _samplingDesigns.SaveFilterConfig(_moduleState.SamplingDesign, _moduleState.FilterConfig);
+
       _moduleState.FilteredSamplesState.IsEnabled = _isEnabled;
     }
 
     private void ObserveIsUnion(object _)
     {
+      RequireNotNull(_moduleState.SamplingDesign);
+
+      _moduleState.FilterConfig = _moduleState.FilterConfig with { IsUnion = _isUnion };
+      _samplingDesigns.SaveFilterConfig(_moduleState.SamplingDesign, _moduleState.FilterConfig);
+
       _moduleState.FilteredSamplesState.IsUnion = _isUnion;
+
       RecompileOutputFilters();
     }
 
     private void RecompileOutputFilters()
     {
       _moduleState.OutputFilters = _moduleState.Outputs.Map(
-        t => (t.Index, _moduleState.FilteredSamplesState.IsInFilteredSet(t.Output))
+        t => (t.Index, _moduleState.FilterConfig.IsInFilteredSet(t.Output))
         );
     }
 
@@ -368,20 +411,20 @@ namespace Sampling
         return element.Unit;
       }
 
-      _moduleState.FilteredSamplesState.FilteredSampleStates.Iter(fss =>
+      _moduleState.FilterConfig.Filters.Iter(f =>
       {
         var outputsFilterViewModel = new OutputsFilterViewModel(
           IndependentVariableName,
-          independentData[fss.At],
+          independentData[f.At],
           IndependentVariableUnit,
-          fss.OutputName,
-          fss.From,
-          fss.To,
-          GetOutputUnit(fss.OutputName),
+          f.OutputName,
+          f.From,
+          f.To,
+          GetOutputUnit(f.OutputName),
           _toggleEnable,
           _delete
           )
-        { IsEnabled = fss.IsEnabled, FilterHashCode = fss.GetHashCode() };
+        { IsEnabled = f.IsEnabled, FilterHashCode = f.GetHashCode() };
 
         OutputsFilterViewModels.Add(outputsFilterViewModel);
       });
@@ -402,6 +445,7 @@ namespace Sampling
 
     private bool _disposed = false;
     private readonly ModuleState _moduleState;
+    private readonly SamplingDesigns _samplingDesigns;
     private readonly Simulation _simulation;
     private readonly ICommand _toggleEnable;
     private readonly ICommand _delete;

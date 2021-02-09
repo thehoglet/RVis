@@ -19,6 +19,11 @@
   @exit /b 1
 )
 
+@if not exist %artifactStagingDirectory%\win-x64\RVis_v%version% (
+  @echo Expecting published x64^^!
+  @exit /b 1
+)
+
 @mkdir %artifactStagingDirectory%\win-x86\RVis_v%version%\module
 
 set moduleDirectory="%artifactStagingDirectory%\win-x86\RVis_v%version%\module"
@@ -38,19 +43,6 @@ set moduleDirectory="%artifactStagingDirectory%\win-x86\RVis_v%version%\module"
 @mkdir %moduleDirectory%\sensitivity
 @copy UI\module\Sensitivity\bin\Release\net5.0-windows\win-x86\Sensitivity.dll %moduleDirectory%\sensitivity\ >nul
 
-@echo.
-@echo Prepared portable %dirName%
-@echo.
-
-@dir %dirName% /B /S
-
-@echo.
-
-@if not exist %artifactStagingDirectory%\win-x64\RVis_v%version% (
-  @echo Expecting published x64^^!
-  @exit /b 1
-)
-
 @mkdir %artifactStagingDirectory%\win-x64\RVis_v%version%\module
 
 set moduleDirectory="%artifactStagingDirectory%\win-x64\RVis_v%version%\module"
@@ -69,14 +61,6 @@ set moduleDirectory="%artifactStagingDirectory%\win-x64\RVis_v%version%\module"
 
 @mkdir %moduleDirectory%\sensitivity
 @copy UI\module\Sensitivity\bin\Release\net5.0-windows\win-x64\Sensitivity.dll %moduleDirectory%\sensitivity\ >nul
-
-@echo.
-@echo Prepared portable %dirNamex64%
-@echo.
-
-@dir %dirNamex64% /B /S
-
-@echo.
 
 @endlocal
 

@@ -177,6 +177,11 @@ namespace Sampling
     ICommand Delete { get; }
   }
 
+  public interface IOutputsEvidenceViewModel
+  {
+    Arr<ISelectableItemViewModel> Observations { get; }
+  }
+
   internal interface IOutputsFilteredSamplesViewModel
   {
     string IndependentVariableName { get; }
@@ -206,11 +211,13 @@ namespace Sampling
     Arr<string> OutputNames { get; }
     int SelectedOutputName { get; set; }
     PlotModel Outputs { get; }
+    PlotController PlotController { get; }
     ICommand ToggleSeriesType { get; }
     bool IsSeriesTypeLine { get; }
     ICommand ResetAxes { get; }
     IOutputsSelectedSampleViewModel OutputsSelectedSampleViewModel { get; }
     IOutputsFilteredSamplesViewModel OutputsFilteredSamplesViewModel { get; }
+    IOutputsEvidenceViewModel OutputsEvidenceViewModel { get; }
   }
 
   internal interface IDesignDigestViewModel

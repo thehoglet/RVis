@@ -126,8 +126,8 @@ namespace Sampling
     private void SetTitle()
     {
       var isFiltered =
-        _moduleState.FilteredSamplesState.IsEnabled &&
-        !_moduleState.FilteredSamplesState.FilteredSampleStates.IsEmpty &&
+        _moduleState.FilterConfig.IsEnabled &&
+        !_moduleState.FilterConfig.Filters.IsEmpty &&
         !_moduleState.Outputs.IsEmpty;
 
       Histogram.Title = isFiltered

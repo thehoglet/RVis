@@ -203,6 +203,7 @@ namespace Sampling
       {
         UnloadCurrentDesign();
         _moduleState.Outputs = default;
+        _moduleState.FilterConfig = FilterConfig.Default;
         _moduleState.OutputFilters = default;
         _moduleState.Samples = default;
         _moduleState.SamplingDesign = default;
@@ -371,17 +372,15 @@ namespace Sampling
         if (isComplete || (NOutputsAcquired - _moduleState.Outputs.Count) > 9)
         {
           _moduleState.Outputs = _outputRequestJob
-            .Filter(t => t.Output != default)
-            .Select((t, i) => (i, t.Output!))
-            .ToArr();
+            .Select((t, i) => (Index: i, t.Output))
+            .Where(t => t.Output != default)
+            .ToArr()!;
+
+          _moduleState.OutputFilters = _moduleState.Outputs
+            .Map(o => (o.Index, _moduleState.FilterConfig.IsInFilteredSet(o.Output)));
         }
 
         if (!isComplete) return;
-
-        _moduleState.OutputFilters = _outputRequestJob
-          .Filter(t => t.Output != default)
-          .Select((t, i) => (i, _moduleState.FilteredSamplesState.IsInFilteredSet(t.Output!)))
-          .ToArr();
 
         _runOutputRequestJob = false;
         _jobSubscriptions?.Dispose();
@@ -492,21 +491,22 @@ namespace Sampling
     {
       RequireNotNull(_moduleState.SamplingDesign);
 
-      _outputRequestJob = CompileOutputRequestJob(
+      var outputRequestJob = CompileOutputRequestJob(
         _simulation,
         _simData,
         _moduleState.SamplingDesign.Samples,
         _moduleState.SamplingDesign.NoDataIndices
         );
 
-      _moduleState.OutputFilters = default;
+      _moduleState.Outputs = outputRequestJob
+        .Select((t, i) => (Index: i, t.Output))
+        .Where(t => t.Output != default)
+        .ToArr()!;
 
-      _moduleState.Outputs = _outputRequestJob
-        .Filter(t => t.Output != default)
-        .Select((t, i) => (i, t.Output!))
-        .ToArr();
+      _moduleState.OutputFilters = _moduleState.Outputs
+        .Map(o => (o.Index, _moduleState.FilterConfig.IsInFilteredSet(o.Output)));
 
-      NOutputsAcquired = _outputRequestJob.Count(t =>
+      NOutputsAcquired = outputRequestJob.Count(t =>
       {
         if (t.Input == default) return true;
         if (t.Output != default) return true;
@@ -514,9 +514,16 @@ namespace Sampling
         return false;
       });
 
-      NOutputsToAcquire = _outputRequestJob.Length;
+      NOutputsToAcquire = outputRequestJob.Length;
 
       AcquireOutputsProgress = 100.0 * NOutputsAcquired / NOutputsToAcquire;
+
+      var isComplete = NOutputsAcquired == NOutputsToAcquire;
+
+      if (!isComplete)
+      {
+        _outputRequestJob = outputRequestJob;
+      }
     }
 
     private static (SimInput Input, bool OutputRequested, NumDataTable? Output)[] CompileOutputRequestJob(

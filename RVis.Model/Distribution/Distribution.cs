@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using static LanguageExt.Prelude;
 using static RVis.Base.Check;
 using static RVis.Base.Extensions.EnumExt;
@@ -17,6 +18,42 @@ namespace RVis.Model
   {
     public static Arr<DistributionType> GetDistributionTypes(DistributionType flags) =>
       _distributionTypes.Filter(dt => flags.HasFlag(dt));
+
+    public static (string Variable, IDistribution Distribution) ParseRelation(string representation)
+    {
+      var match = _reRelation.Match(representation);
+      
+      RequireTrue(match.Success, $"Failed to parse relation: {representation}");
+
+      var variable = match.Groups[1].Value;
+      
+      RequireTrue(
+        Enum.TryParse(match.Groups[2].Value, out DistributionType distributionType),
+        $"Unrecognised distribution type: {match.Groups[2].Value}"
+        );
+
+      var parts = match.Groups
+        .Cast<Group>()
+        .Skip(3)
+        .Where(g => g.Success)
+        .Select(g => g.Value)
+        .ToArr();
+
+      var parseMethod = _distributionParserMap[distributionType];
+
+      var maybeDistribution = (Option<IDistribution>)parseMethod.Invoke(
+        null,
+        new object[] { parts }
+        )!;
+
+      var distribution = maybeDistribution.IfNone(
+        () => throw new InvalidOperationException(
+          $"{distributionType} distribution incorrectly specified: {representation}"
+          )
+        );
+
+      return (variable, distribution);
+    }
 
     public static string[] SerializeDistributions(Arr<IDistribution> distributions)
     {
@@ -121,5 +158,7 @@ namespace RVis.Model
     private static readonly IDictionary<DistributionType, Type> _distributionTypeMap;
     private static readonly IDictionary<DistributionType, IDistribution> _distributionDefaultMap;
     private static readonly IDictionary<DistributionType, MethodInfo> _distributionParserMap;
+    private static readonly Regex _reRelation = 
+      new(@"(\w+)\s*~\s*(\w+)\s*\(\s*([\d-+.eE]+)(?:\s*,\s*([\d-+.eE]+))*\)(?:\s*\[\s*([\d-+.eE]+)\s*,\s*([\d-+.eE]+)\s*\])?");
   }
 }

@@ -6,15 +6,26 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:RVisUI.Controls.Views"
              xmlns:mvvmd="clr-namespace:RVisUI.Mvvm.Design;assembly=RVisUI.Mvvm"
+             xmlns:wpf="clr-namespace:RVisUI.Wpf;assembly=RVisUI.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="768" 
              d:DesignWidth="1366"
              d:DataContext="{d:DesignInstance Type=mvvmd:HomeViewModel, IsDesignTimeCreatable=True}"
              >
 
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <wpf:BooleanToVisibilityConverter 
+        x:Key="b2vc" 
+        True="Visible" 
+        False="Collapsed" 
+        />
+    </ResourceDictionary>    
+  </UserControl.Resources>
+
   <Grid>
     
-    <TabControl>
+    <TabControl SelectedIndex="{Binding SelectedIndex}">
 
       <TabControl.Resources>
         <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
@@ -36,6 +47,14 @@
 
       <TabItem Header="LIBRARY">
         <local:LibraryView DataContext="{Binding LibraryViewModel}"/>
+      </TabItem>
+
+      <TabItem Header="RUN CONTROL" Visibility="{Binding RunControlViewModel.IsVisible, Converter={StaticResource b2vc}}">
+        <local:RunControlView DataContext="{Binding RunControlViewModel}"/>
+      </TabItem>
+
+      <TabItem Header="ACAT" Visibility="{Binding AcatHostViewModel.IsVisible, Converter={StaticResource b2vc}}">
+        <local:AcatHostView DataContext="{Binding AcatHostViewModel}"/>
       </TabItem>
 
     </TabControl>

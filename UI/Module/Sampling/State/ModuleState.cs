@@ -41,6 +41,11 @@ namespace Sampling
     }
     private Arr<ParameterState> _parameterStates;
 
+    internal IObservable<(Arr<ParameterState> ParameterStates, ObservableQualifier ObservableQualifier)> ParameterStateChanges =>
+      _parameterStateChangesSubject.AsObservable();
+    private readonly ISubject<(Arr<ParameterState> ParameterStates, ObservableQualifier ObservableQualifier)> _parameterStateChangesSubject =
+      new Subject<(Arr<ParameterState> ParameterStates, ObservableQualifier ObservableQualifier)>();
+
     internal DataTable? Samples
     {
       get => _samples;
@@ -55,6 +60,13 @@ namespace Sampling
     }
     private Arr<(int Index, NumDataTable Output)> _outputs;
 
+    internal FilterConfig FilterConfig
+    {
+      get => _filterConfig;
+      set => this.RaiseAndSetIfChanged(ref _filterConfig, value, PropertyChanged);
+    }
+    private FilterConfig _filterConfig = FilterConfig.Default;
+
     internal Arr<(int Index, bool IsInFilteredSet)> OutputFilters
     {
       get => _outputFilters;
@@ -68,11 +80,6 @@ namespace Sampling
       set => this.RaiseAndSetIfChanged(ref _samplingDesign, value, PropertyChanged);
     }
     private SamplingDesign? _samplingDesign;
-
-    internal IObservable<(Arr<ParameterState> ParameterStates, ObservableQualifier ObservableQualifier)> ParameterStateChanges =>
-      _parameterStateChangesSubject.AsObservable();
-    private readonly ISubject<(Arr<ParameterState> ParameterStates, ObservableQualifier ObservableQualifier)> _parameterStateChangesSubject =
-      new Subject<(Arr<ParameterState> ParameterStates, ObservableQualifier ObservableQualifier)>();
 
     internal string? RootExportDirectory
     {

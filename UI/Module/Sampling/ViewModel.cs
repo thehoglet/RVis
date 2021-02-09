@@ -36,7 +36,9 @@ namespace Sampling
     {
       _appState = appState;
       _appService = appService;
+      _sharedState = appState.SimSharedState;
       _simulation = appState.Target.AssertSome();
+      _evidence = appState.SimEvidence;
 
       var pathToSamplingDesignsDirectory = _simulation.GetPrivateDirectory(nameof(Sampling), nameof(SamplingDesigns));
       _samplingDesigns = new SamplingDesigns(pathToSamplingDesignsDirectory);
@@ -46,7 +48,7 @@ namespace Sampling
       _parametersViewModel = new ParametersViewModel(appState, appService, appSettings, _moduleState);
       _samplesViewModel = new SamplesViewModel(appState, appService, appSettings, _moduleState);
       _designViewModel = new DesignViewModel(appState, appService, appSettings, _moduleState, _samplingDesigns);
-      _outputsViewModel = new OutputsViewModel(appState, appService, appSettings, _moduleState);
+      _outputsViewModel = new OutputsViewModel(appState, appService, appSettings, _moduleState, _samplingDesigns);
       _designDigestsViewModel = new DesignDigestsViewModel(appService, _moduleState, _samplingDesigns);
 
       _reactiveSafeInvoke = appService.GetReactiveSafeInvoke();
@@ -59,9 +61,15 @@ namespace Sampling
             )
           ),
 
-        _appState.SimSharedState.ParameterSharedStateChanges.Subscribe(
+        _sharedState.ParameterSharedStateChanges.Subscribe(
           _reactiveSafeInvoke.SuspendAndInvoke<(Arr<SimParameterSharedState>, ObservableQualifier)>(
-            ObserveParameterSharedStateChange
+            ObserveSharedStateParameterChange
+            )
+          ),
+
+        _sharedState.ObservationsSharedStateChanges.Subscribe(
+          _reactiveSafeInvoke.SuspendAndInvoke<(Arr<SimObservationsSharedState>, ObservableQualifier)>(
+            ObserveSharedStateObservationsChange
             )
           ),
 
@@ -79,6 +87,20 @@ namespace Sampling
               ObserveModuleStateSamplingDesign
               )
             ),
+
+        _moduleState.OutputsState
+          .ObservableForProperty(os => os.ObservationsReferences)
+          .Subscribe(
+            _reactiveSafeInvoke.SuspendAndInvoke<object>(
+              ObserveOutputsStateObservationsReferences
+              )
+            ),
+
+        _evidence.ObservationsChanges.Subscribe(
+          _reactiveSafeInvoke.SuspendAndInvoke<(Arr<SimObservations>, ObservableQualifier)>(
+            ObserveEvidenceObservationsChange
+            )
+          ),
 
         _samplingDesigns.SamplingDesignChanges.Subscribe(
           _reactiveSafeInvoke.SuspendAndInvoke<(DesignDigest, ObservableQualifier)>(
@@ -112,59 +134,80 @@ namespace Sampling
       Arr<SimObservations> observationsSharedStates
       )
     {
-      if (!applyType.IncludesParameters()) return;
-
       using (_reactiveSafeInvoke.SuspendedReactivity)
       {
-        if (applyType.IsSet())
+        if (applyType.IncludesParameters())
         {
-          var paired = _moduleState.ParameterStates.Map(
-              ps => (PS: ps, PSS: parameterSharedStates.Find(pss => pss.Parameter.Name == ps.Name))
-              );
-
-          var updated = paired.Map(p => p.PSS.Match(
-            pss => ApplyDistributionAndSelect(pss.Parameter, p.PS, pss.Distribution),
-            () => p.PS.WithIsSelected(false)
-            ));
-
-          var added = parameterSharedStates
-            .Filter(pss => !_moduleState.ParameterStates.Exists(ps => ps.Name == pss.Parameter.Name))
-            .Map(pss => CreateAndApplyDistribution(pss));
-
-          UnloadDesign();
-          SetActivities();
-
-          _moduleState.ParameterStates = (updated + added)
-            .OrderBy(ps => ps.Name.ToUpperInvariant())
-            .ToArr();
-        }
-        else if (applyType.IsSingle())
-        {
-          var parameterSharedState = parameterSharedStates.Head();
-
-          var index = _moduleState.ParameterStates.FindIndex(
-            ps => ps.Name == parameterSharedState.Parameter.Name
-            );
-
-          UnloadDesign();
-          SetActivities();
-
-          if (index.IsFound())
+          if (applyType.IsSet())
           {
-            var parameterState = ApplyDistributionAndSelect(
-              parameterSharedState.Parameter,
-              _moduleState.ParameterStates[index],
-              parameterSharedState.Distribution
-              );
-            _moduleState.ParameterStates = _moduleState.ParameterStates.SetItem(index, parameterState);
-          }
-          else
-          {
-            var parameterState = CreateAndApplyDistribution(parameterSharedState);
-            var parameterStates = _moduleState.ParameterStates + parameterState;
-            _moduleState.ParameterStates = parameterStates
+            var paired = _moduleState.ParameterStates.Map(
+                ps => (PS: ps, PSS: parameterSharedStates.Find(pss => pss.Parameter.Name == ps.Name))
+                );
+
+            var updated = paired.Map(p => p.PSS.Match(
+              pss => ApplyDistributionAndSelect(pss.Parameter, p.PS, pss.Minimum, pss.Maximum, pss.Distribution),
+              () => p.PS.WithIsSelected(false)
+              ));
+
+            var added = parameterSharedStates
+              .Filter(pss => !_moduleState.ParameterStates.Exists(ps => ps.Name == pss.Parameter.Name))
+              .Map(pss => CreateAndApplyDistribution(pss));
+
+            UnloadDesign();
+            SetActivities();
+
+            _moduleState.ParameterStates = (updated + added)
               .OrderBy(ps => ps.Name.ToUpperInvariant())
               .ToArr();
+          }
+          else if (applyType.IsSingle())
+          {
+            var parameterSharedState = parameterSharedStates.Head();
+
+            var index = _moduleState.ParameterStates.FindIndex(
+              ps => ps.Name == parameterSharedState.Parameter.Name
+              );
+
+            UnloadDesign();
+            SetActivities();
+
+            if (index.IsFound())
+            {
+              var parameterState = ApplyDistributionAndSelect(
+                parameterSharedState.Parameter,
+                _moduleState.ParameterStates[index],
+                parameterSharedState.Minimum,
+                parameterSharedState.Maximum,
+                parameterSharedState.Distribution
+                );
+              _moduleState.ParameterStates = _moduleState.ParameterStates.SetItem(index, parameterState);
+            }
+            else
+            {
+              var parameterState = CreateAndApplyDistribution(parameterSharedState);
+              var parameterStates = _moduleState.ParameterStates + parameterState;
+              _moduleState.ParameterStates = parameterStates
+                .OrderBy(ps => ps.Name.ToUpperInvariant())
+                .ToArr();
+            }
+          }
+        }
+
+        if (applyType.IncludesObservations())
+        {
+          var references = observationsSharedStates.Map(oss => _evidence.GetReference(oss));
+          if (applyType.IsSet())
+          {
+            _moduleState.OutputsState.ObservationsReferences = references;
+          }
+          else if (applyType.IsSingle())
+          {
+            var reference = references.Head();
+            if (!_moduleState.OutputsState.ObservationsReferences.Contains(reference))
+            {
+              _moduleState.OutputsState.ObservationsReferences =
+                _moduleState.OutputsState.ObservationsReferences.Add(reference);
+            }
           }
         }
       }
@@ -172,33 +215,41 @@ namespace Sampling
 
     public void ShareState(ISimSharedStateBuilder sharedStateBuilder)
     {
-      if (!sharedStateBuilder.BuildType.IncludesParameters()) return;
-
       using (_reactiveSafeInvoke.SuspendedReactivity)
       {
-        _moduleState.ParameterStates.Filter(ps => ps.IsSelected).Iter(ps =>
+        if (sharedStateBuilder.BuildType.IncludesParameters())
         {
-          var (value, minimum, maximum) =
-            _appState.SimSharedState.ParameterSharedStates.GetParameterValueStateOrDefaults(
-              ps.Name,
-              _simulation.SimConfig.SimInput.SimParameters
-              );
-
-          var distribution = ps.GetDistribution();
-
-          if (distribution.DistributionType == DistributionType.Invariant)
+          _moduleState.ParameterStates.Filter(ps => ps.IsSelected).Iter(ps =>
           {
-            var invariantDistribution = RequireInstanceOf<InvariantDistribution>(distribution);
-            value = invariantDistribution.Value;
-            if (minimum > value) minimum = value.GetPreviousOrderOfMagnitude();
-            if (maximum < value) maximum = value.GetNextOrderOfMagnitude();
-            sharedStateBuilder.AddParameter(ps.Name, value, minimum, maximum, None);
-          }
-          else
-          {
-            sharedStateBuilder.AddParameter(ps.Name, value, minimum, maximum, Some(distribution));
-          }
-        });
+            var (value, minimum, maximum) =
+              _appState.SimSharedState.ParameterSharedStates.GetParameterValueStateOrDefaults(
+                ps.Name,
+                _simulation.SimConfig.SimInput.SimParameters
+                );
+
+            var distribution = ps.GetDistribution();
+
+            if (distribution.DistributionType == DistributionType.Invariant)
+            {
+              var invariantDistribution = RequireInstanceOf<InvariantDistribution>(distribution);
+              value = invariantDistribution.Value;
+              if (minimum > value) minimum = value.GetPreviousOrderOfMagnitude();
+              if (maximum < value) maximum = value.GetNextOrderOfMagnitude();
+              sharedStateBuilder.AddParameter(ps.Name, value, minimum, maximum, None);
+            }
+            else
+            {
+              sharedStateBuilder.AddParameter(ps.Name, value, minimum, maximum, Some(distribution));
+            }
+          });
+        }
+
+        if (sharedStateBuilder.BuildType.IncludesObservations())
+        {
+          _moduleState.OutputsState.ObservationsReferences.Iter(
+            sharedStateBuilder.AddObservations
+          );
+        }
       }
     }
 
@@ -373,7 +424,27 @@ namespace Sampling
       }
     }
 
-    private void ObserveParameterSharedStateChange(
+    private void ObserveOutputsStateObservationsReferences(object _)
+    {
+      if (!_moduleState.AutoShareObservationsSharedState.IsTrue()) return;
+
+       _sharedState.ShareObservationsState(_moduleState.OutputsState.ObservationsReferences);
+    }
+
+    private void ObserveEvidenceObservationsChange((Arr<SimObservations> Observations, ObservableQualifier ObservableQualifier) change)
+    {
+      if (change.ObservableQualifier != ObservableQualifier.Remove) return;
+
+      var references = change.Observations.Map(o => _evidence.GetReference(o));
+
+      var withoutRemoved = _moduleState.OutputsState.ObservationsReferences.Filter(r => !references.Contains(r));
+      if (withoutRemoved.Count < _moduleState.OutputsState.ObservationsReferences.Count)
+      {
+        _moduleState.OutputsState.ObservationsReferences = withoutRemoved;
+      }
+    }
+
+    private void ObserveSharedStateParameterChange(
       (Arr<SimParameterSharedState> ParameterSharedStates, ObservableQualifier ObservableQualifier) change
       )
     {
@@ -389,7 +460,7 @@ namespace Sampling
           .Map(pss => _moduleState.ParameterStates
             .Find(ps => ps.Name == pss.Name)
             .Match(
-              ps => ApplyDistributionAndSelect(ps, pss.Value, pss.Distribution),
+              ps => ApplyDistributionAndSelect(ps, pss.Value, pss.Minimum, pss.Maximum, pss.Distribution),
               () => CreateAndApplyDistribution(pss)
             )
           );
@@ -411,6 +482,40 @@ namespace Sampling
         if (remaining.Count < _moduleState.ParameterStates.Count)
         {
           _moduleState.ParameterStates = remaining;
+        }
+      }
+    }
+
+    private void ObserveSharedStateObservationsChange(
+      (Arr<SimObservationsSharedState> ObservationsSharedStates, ObservableQualifier ObservableQualifier) change
+      )
+    {
+      if (!_moduleState.AutoApplyObservationsSharedState.IsTrue()) return;
+
+      var observations = change.ObservationsSharedStates
+        .Map(oss => _evidence.GetObservations(oss.Reference))
+        .Somes()
+        .ToArr();
+
+      var references = change.ObservationsSharedStates.Map(oss => oss.Reference);
+
+      if (change.ObservableQualifier.IsAdd())
+      {
+        var toAdd = references.Filter(
+          r => !_moduleState.OutputsState.ObservationsReferences.Contains(r)
+          );
+
+        if (!toAdd.IsEmpty)
+        {
+          _moduleState.OutputsState.ObservationsReferences += toAdd;
+        }
+      }
+      else if (change.ObservableQualifier.IsRemove())
+      {
+        var withoutRemoved = _moduleState.OutputsState.ObservationsReferences.Filter(r => !references.Contains(r));
+        if (withoutRemoved.Count < _moduleState.OutputsState.ObservationsReferences.Count)
+        {
+          _moduleState.OutputsState.ObservationsReferences = withoutRemoved;
         }
       }
     }
@@ -442,41 +547,40 @@ namespace Sampling
     private static ParameterState ApplyDistributionAndSelect(
       SimParameter parameter,
       ParameterState parameterState,
+      double minimum,
+      double maximum,
       Option<IDistribution> maybeDistribution
       ) =>
-      ApplyDistributionAndSelect(parameterState, parameter.Scalar, maybeDistribution);
+      ApplyDistributionAndSelect(parameterState, parameter.Scalar, minimum, maximum, maybeDistribution);
 
     private static ParameterState ApplyDistributionAndSelect(
       ParameterState parameterState,
       double value,
+      double minimum,
+      double maximum,
       Option<IDistribution> maybeDistribution
-      ) =>
-      maybeDistribution.Match(
-        d =>
-        {
-          var index = parameterState.Distributions.FindIndex(
-            e => e.DistributionType == d.DistributionType
-            );
-          var distributions = parameterState.Distributions.SetItem(index, d);
-          return new ParameterState(
-            parameterState.Name,
-            d.DistributionType,
-            distributions,
-            isSelected: true
-            );
-        },
-        () =>
-        {
-          var invariantDistribution = new InvariantDistribution(value);
-          var distributions = parameterState.Distributions.SetDistribution(invariantDistribution);
-          parameterState = new ParameterState(
-            parameterState.Name,
-            DistributionType.Invariant,
-            distributions,
-            isSelected: true
-            );
-          return parameterState;
-        });
+      )
+    {
+      var distributions = parameterState.Distributions.Map(
+        d => d.WithLowerUpper(minimum, maximum)
+        );
+      var invariantDistribution = new InvariantDistribution(value);
+      distributions = distributions.SetDistribution(invariantDistribution);
+
+      DistributionType distributionType;
+
+      (distributionType, distributions) = maybeDistribution.Match(
+         d => (d.DistributionType, distributions.SetDistribution(d)),
+         () => (parameterState.DistributionType, distributions)
+         );
+
+      return new ParameterState(
+        parameterState.Name,
+        distributionType,
+        distributions,
+        isSelected: true
+        );
+    }
 
     private static ParameterState CreateAndApplyDistribution(
       (SimParameter Parameter, double Minimum, double Maximum, Option<IDistribution> Distribution) parameterSharedState
@@ -524,6 +628,7 @@ namespace Sampling
       try
       {
         var samplingDesign = _samplingDesigns.Load(createdOn);
+        var filterConfig = _samplingDesigns.LoadFilterConfig(samplingDesign);
 
         var existingParameterStates = _moduleState.ParameterStates.Map(
           ps => samplingDesign.DesignParameters
@@ -577,6 +682,9 @@ namespace Sampling
 
         _moduleState.SamplingDesign = samplingDesign;
         _moduleState.Samples = samplingDesign.Samples;
+        _moduleState.FilterConfig = filterConfig;
+        _moduleState.OutputFilters = _moduleState.Outputs
+          .Map(o => (o.Index, _moduleState.FilterConfig.IsInFilteredSet(o.Output)));
 
         SetActivities();
 
@@ -596,6 +704,7 @@ namespace Sampling
     private void UnloadDesign()
     {
       _moduleState.Outputs = default;
+      _moduleState.FilterConfig = FilterConfig.Default;
       _moduleState.OutputFilters = default;
       _moduleState.Samples = default;
       _moduleState.SamplingDesign = default;
@@ -617,13 +726,13 @@ namespace Sampling
 
       var nSamples = _moduleState.SamplingDesign.Samples.Rows.Count;
 
-      var indices = _moduleState.FilteredSamplesState.IsEnabled ?
+      var indices = _moduleState.FilterConfig.IsEnabled ?
         _moduleState.OutputFilters.Filter(o => o.IsInFilteredSet).Map(o => o.Index)
         : Range(0, nSamples);
 
       System.Data.DataTable samples;
 
-      if (_moduleState.FilteredSamplesState.IsEnabled)
+      if (_moduleState.FilterConfig.IsEnabled)
       {
         samples = _moduleState.SamplingDesign.Samples.Clone();
         indices.Iter(i =>
@@ -656,7 +765,7 @@ namespace Sampling
 
         csvWriter.WriteField(independentData.Name);
 
-        indices.Iter(i => csvWriter.WriteField($"Spl #{i+1}"));
+        indices.Iter(i => csvWriter.WriteField($"Spl #{i + 1}"));
 
         csvWriter.NextRecord();
 
@@ -669,7 +778,7 @@ namespace Sampling
             var output = _moduleState.Outputs
               .Find(o => o.Index == j)
               .Match(o => o.Output[name][i], () => NaN);
-            
+
             csvWriter.WriteField(output);
           });
 
@@ -699,7 +808,9 @@ namespace Sampling
 
     private readonly IAppState _appState;
     private readonly IAppService _appService;
+    private readonly ISimSharedState _sharedState;
     private readonly Simulation _simulation;
+    private readonly ISimEvidence _evidence;
     private readonly SamplingDesigns _samplingDesigns;
     private readonly ModuleState _moduleState;
     private readonly ParametersViewModel _parametersViewModel;

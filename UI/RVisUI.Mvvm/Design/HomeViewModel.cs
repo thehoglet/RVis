@@ -11,5 +11,11 @@ namespace RVisUI.Mvvm.Design
     public IImportMCSimViewModel ImportMCSimViewModel => new ImportMCSimViewModel();
 
     public ILibraryViewModel LibraryViewModel => throw new NotImplementedException();
+
+    public IRunControlViewModel RunControlViewModel => new RunControlViewModel();
+
+    public IAcatHostViewModel AcatHostViewModel => new AcatHostViewModel();
+
+    public int SelectedIndex { get => 2; set => throw new NotImplementedException(); }
   }
 }

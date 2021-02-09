@@ -8,7 +8,6 @@ using RVisUI.Model.Extensions;
 using System;
 using System.IO;
 using System.Linq;
-using static RVisUI.Model.ModuleInfo;
 using static System.Array;
 using static System.IO.Path;
 using static System.Reflection.Assembly;
@@ -24,8 +23,14 @@ namespace RVisUI.Ioc
     }
     private string? _extraModulePath;
 
-    public Arr<ModuleInfo> LoadModules()
+    public Arr<IRVisExtensibility> GetServices(bool rebind)
     {
+      if (!rebind)
+      {
+        var services = App.Current.NinjectKernel.GetAll<IRVisExtensibility>().ToArr();
+        if (!services.IsEmpty) return services;
+      }
+
       App.Current.NinjectKernel.Unbind<IRVisExtensibility>();
 
       var pathToApp = GetExecutingAssembly().GetDirectory();
@@ -72,11 +77,7 @@ namespace RVisUI.Ioc
         }
       }
 
-      var services = App.Current.NinjectKernel.GetAll<IRVisExtensibility>().ToArr();
-      var moduleInfos = GetModuleInfos(services);
-      moduleInfos = SortAndEnable(moduleInfos, _appSettings.ModuleConfiguration);
-
-      return moduleInfos;
+      return App.Current.NinjectKernel.GetAll<IRVisExtensibility>().ToArr();
     }
 
     private static void DoFileBind(string file)

@@ -7,8 +7,9 @@ using RVisUI.Model.Extensions;
 using RVisUI.Mvvm;
 using System;
 using System.Linq;
-using static RVis.Base.Extensions.NumExt;
 using static LanguageExt.Prelude;
+using static RVis.Base.Extensions.NumExt;
+using static RVisUI.Model.ModuleInfo;
 
 namespace RVisUI.Ioc
 {
@@ -73,14 +74,17 @@ namespace RVisUI.Ioc
 
       if (viewModel is ISimulationHomeViewModel)
       {
-        var moduleInfos = LoadModules().Filter(mi => mi.IsEnabled);
+        var services = GetServices(rebind: true);
+        var moduleInfos = GetModuleInfos(services);
+        moduleInfos = SortAndEnable(moduleInfos, _appSettings.ModuleConfiguration);
+        moduleInfos = moduleInfos.Filter(mi => mi.IsEnabled);
 
         var updatedUIComponentTries = moduleInfos
           .Map(
             mi => existingUIComponents
               .Find(c => c.ID == mi.ID)
               .Match(c => c, CreateUIComponent(mi))
-          );  
+          );
 
         var errors = lefts(updatedUIComponentTries).ToArr();
         var components = rights(updatedUIComponentTries).ToArr();

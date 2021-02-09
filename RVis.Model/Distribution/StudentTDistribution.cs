@@ -49,6 +49,12 @@ namespace RVis.Model
 
     public bool IsTruncated => !IsNegativeInfinity(Lower) || !IsPositiveInfinity(Upper);
 
+    IDistribution IDistribution.WithLowerUpper(double lower, double upper) =>
+      WithLowerUpper(lower, upper);
+
+    public StudentTDistribution WithLowerUpper(double lower, double upper) =>
+      new StudentTDistribution(Mu, Sigma, Nu, lower, upper);
+
     public bool IsConfigured => !(IsNaN(Mu) || IsNaN(Sigma) || IsNaN(Nu));
 
     public double Mean

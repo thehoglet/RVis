@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using Ninject;
+using NLog;
 using ReactiveUI;
 using RVis.Base.Extensions;
 using RVis.Client;
@@ -28,6 +29,8 @@ namespace RVisUI.Ioc
       _appSettings = appSettings;
       SecondInterval = Observable.Interval(TimeSpan.FromSeconds(1), DispatcherScheduler.Current);
     }
+
+    public IKernel Factory => App.Current.NinjectKernel;
 
     public IObservable<long> SecondInterval { get; }
 
@@ -62,7 +65,7 @@ namespace RVisUI.Ioc
       RequireTrue(_dialogViews.ContainsKey(dialogViewName));
       var viewType = _dialogViews[dialogViewName];
 
-      var view = (Window)Activator.CreateInstance(viewType).AssertNotNull();
+      var view = RequireInstanceOf<Window>(Activator.CreateInstance(viewType));
       view.DataContext = viewModel;
       view.Owner = GetWindowForDataContext(parentViewModel);
 

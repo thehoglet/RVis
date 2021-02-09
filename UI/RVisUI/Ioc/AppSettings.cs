@@ -195,6 +195,20 @@ namespace RVisUI.Ioc
       }
     }
 
+    public string PathToRunControlDrop
+    {
+      get => Settings.Default.PathToRunControlDrop;
+      set
+      {
+        if (value != Settings.Default.PathToRunControlDrop)
+        {
+          Settings.Default.PathToRunControlDrop = value;
+          Settings.Default.Save();
+          NotifyPropertyChanged();
+        }
+      }
+    }
+
     public double Zoom
     {
       get => Settings.Default.Zoom;

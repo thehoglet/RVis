@@ -44,7 +44,6 @@ namespace Sampling
       RequireTrue(parameterSamples.ForAll(ps => ps.ParameterState.IsSelected));
       RequireTrue(parameterSamples.ForAll(ps => ps.ParameterState.DistributionType != DistributionType.Invariant));
       RequireTrue(parameterSamples.Count > 1);
-      RequireTrue(parameterSamples.ForAll(ps => _rankCorrelationDesign.Correlations.Exists(c => c.Parameter == ps.ParameterState.Name)));
 
       var parameters = parameterSamples.Map(ps => ps.ParameterState.Name);
       RequireTrue(parameters.ForAll(
@@ -119,11 +118,9 @@ namespace Sampling
 
       Range(0, _nSamples).Iter(i =>
       {
-        targetIndices.Iter((j, ti) =>
-        {
-          var value = parameterSamples[j].Samples[i];
-          itemArray[ti] = value.ToSigFigs(5);
-        });
+        targetIndices.Iter(
+          (j, ti) => itemArray[ti] = parameterSamples[j].Samples[i]
+          );
 
         dataTable.Rows.Add(itemArray);
       });

@@ -18,6 +18,8 @@ namespace Sampling.Design
 
     public PlotModel Outputs => CreatePlotModel();
 
+    public PlotController PlotController => new PlotController();
+
     public ICommand ToggleSeriesType => throw new NotImplementedException();
 
     public bool IsSeriesTypeLine => true;
@@ -27,6 +29,8 @@ namespace Sampling.Design
     public IOutputsSelectedSampleViewModel OutputsSelectedSampleViewModel { get; } = new OutputsSelectedSampleViewModel();
 
     public IOutputsFilteredSamplesViewModel OutputsFilteredSamplesViewModel { get; } = new OutputsFilteredSamplesViewModel();
+
+    public IOutputsEvidenceViewModel OutputsEvidenceViewModel { get; } = new OutputsEvidenceViewModel();
 
     private static PlotModel CreatePlotModel()
     {

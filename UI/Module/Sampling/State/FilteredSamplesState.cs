@@ -21,29 +21,6 @@ namespace Sampling
     }
     private bool _isUnion;
 
-    internal Arr<FilteredSampleState> FilteredSampleStates
-    {
-      get => _filteredSampleStates;
-      set => this.RaiseAndSetIfChanged(ref _filteredSampleStates, value, PropertyChanged);
-    }
-    private Arr<FilteredSampleState> _filteredSampleStates;
-
-    internal bool IsInFilteredSet(NumDataTable output)
-    {
-      var filters = FilteredSampleStates
-        .Filter(fss => fss.IsEnabled)
-        .Map(fss =>
-        {
-          var column = output[fss.OutputName];
-          var datum = column[fss.At];
-          return datum >= fss.From && datum <= fss.To;
-        });
-
-      if (filters.IsEmpty) return true;
-
-      return IsUnion ? filters.Exists(f => f) : filters.ForAll(f => f);
-    }
-
     public event PropertyChangedEventHandler? PropertyChanged;
   }
 }

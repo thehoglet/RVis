@@ -6,6 +6,7 @@ using OxyPlot.Axes;
 using OxyPlot.Series;
 using ReactiveUI;
 using RVis.Base.Extensions;
+using RVis.Data;
 using RVis.Model;
 using RVis.Model.Extensions;
 using RVisUI.AppInf.Extensions;
@@ -24,14 +25,22 @@ namespace Sampling
 {
   internal sealed class OutputsViewModel : IOutputsViewModel, INotifyPropertyChanged, IDisposable
   {
-    internal OutputsViewModel(IAppState appState, IAppService appService, IAppSettings appSettings, ModuleState moduleState)
+    internal OutputsViewModel(
+      IAppState appState,
+      IAppService appService,
+      IAppSettings appSettings,
+      ModuleState moduleState,
+      SamplingDesigns samplingDesigns
+      )
     {
+      _appState = appState;
       _appSettings = appSettings;
       _moduleState = moduleState;
       _simulation = appState.Target.AssertSome();
 
       _outputsSelectedSampleViewModel = new OutputsSelectedSampleViewModel(appState, appService, moduleState);
-      _outputsFilteredSamplesViewModel = new OutputsFilteredSamplesViewModel(appState, appService, moduleState);
+      _outputsFilteredSamplesViewModel = new OutputsFilteredSamplesViewModel(appState, appService, moduleState, samplingDesigns);
+      _outputsEvidenceViewModel = new OutputsEvidenceViewModel(appState, appService, moduleState);
 
       var output = _simulation.SimConfig.SimOutput;
 
@@ -46,10 +55,17 @@ namespace Sampling
         _moduleState.OutputsState.SelectedOutputName
         );
 
-      Outputs = new PlotModel
-      {
-        IsLegendVisible = false
-      };
+      PlotController = new();
+      PlotController.Bind(
+        new OxyMouseDownGesture(OxyMouseButton.Left),
+        new DelegatePlotCommand<OxyMouseDownEventArgs>(HandleOutputsMouseDown)
+        );
+      PlotController.Bind(
+        new OxyMouseDownGesture(OxyMouseButton.Left, OxyModifierKeys.Control),
+        new DelegatePlotCommand<OxyMouseDownEventArgs>(HandleOutputsMouseDown)
+        );
+
+      Outputs = new();
 
       var horizontalAxis = new LinearAxis
       {
@@ -65,13 +81,9 @@ namespace Sampling
       };
       Outputs.Axes.Add(verticalAxis);
 
-#pragma warning disable CS0618 // Type or member is obsolete
-      Outputs.MouseDown += HandleOutputsMouseDown;
-#pragma warning restore CS0618 // Type or member is obsolete
-
       Outputs.ApplyThemeToPlotModelAndAxes();
 
-      PopulateOutputs();
+      PopulateAll();
 
       ToggleSeriesType = ReactiveCommand.Create(HandleToggleSeriesType);
       ResetAxes = ReactiveCommand.Create(HandleResetAxes);
@@ -96,11 +108,19 @@ namespace Sampling
               )
             ),
 
-        moduleState.FilteredSamplesState
-          .ObservableForProperty(fss => fss.IsEnabled)
+        moduleState.OutputsState
+          .ObservableForProperty(os => os.ObservationsReferences)
           .Subscribe(
             _reactiveSafeInvoke.SuspendAndInvoke<object>(
-              ObserveFilteredSamplesStateIsEnabled
+              ObserveOutputsStateObservationsReferences
+              )
+            ),
+
+        moduleState
+          .ObservableForProperty(ms => ms.FilterConfig)
+          .Subscribe(
+            _reactiveSafeInvoke.SuspendAndInvoke<object>(
+              ObserveModuleStateFilterConfig
               )
             ),
 
@@ -154,6 +174,8 @@ namespace Sampling
 
     public PlotModel Outputs { get; }
 
+    public PlotController PlotController { get; }
+
     public ICommand ToggleSeriesType { get; }
 
     public bool IsSeriesTypeLine
@@ -169,6 +191,8 @@ namespace Sampling
 
     public IOutputsFilteredSamplesViewModel OutputsFilteredSamplesViewModel => _outputsFilteredSamplesViewModel;
 
+    public IOutputsEvidenceViewModel OutputsEvidenceViewModel => _outputsEvidenceViewModel;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public void Dispose() =>
@@ -179,12 +203,10 @@ namespace Sampling
       _moduleState.OutputsState.IsSeriesTypeLine = !IsSeriesTypeLine;
       IsSeriesTypeLine = _moduleState.OutputsState.IsSeriesTypeLine;
 
-      Outputs.Series.Clear();
-      Outputs.Annotations.Clear();
-
-      PopulateSeries();
+      PopulateSeries(repopulate: true);
       UpdateSelectedSeries(NOT_FOUND, _outputsSelectedSampleViewModel.SelectedSample);
 
+      Outputs.Annotations.Clear();
       ApplyOutputFilters();
 
       Outputs.InvalidatePlot(updateData: true);
@@ -196,15 +218,17 @@ namespace Sampling
       Outputs.InvalidatePlot(updateData: false);
     }
 
-    private void HandleOutputsMouseDown(object? sender, OxyMouseDownEventArgs e)
+    private void HandleOutputsMouseDown(IPlotView plotView, IController controller, OxyMouseDownEventArgs e)
     {
       var indexToUnselect = _outputsSelectedSampleViewModel.SelectedSample;
 
       var series = Outputs.GetSeriesFromPoint(e.Position);
 
-      var indexToSelect = series is null
-        ? NOT_FOUND
-        : RequireInstanceOf<int>(series.Tag);
+      var (indexToSelect, serieType) = series is null
+        ? (NOT_FOUND, SerieType.None)
+        : RequireInstanceOf<(int, SerieType)>(series.Tag);
+
+      if (serieType != SerieType.DepVar) return;
 
       _outputsSelectedSampleViewModel.SelectedSample = indexToSelect;
 
@@ -255,10 +279,11 @@ namespace Sampling
           : OxyPalettes.Cool(_moduleState.Outputs.Count).Colors;
       }
 
-      Outputs.Series.Clear();
-      Outputs.Annotations.Clear();
+      PopulateSeries(repopulate: true);
 
-      PopulateSeries();
+      PopulateEvidence();
+
+      Outputs.Annotations.Clear();
       ApplyOutputFilters();
 
       Outputs.InvalidatePlot(updateData: true);
@@ -272,19 +297,26 @@ namespace Sampling
 
       PopulateVerticalAxis();
 
-      Outputs.Series.Clear();
-      Outputs.Annotations.Clear();
-
-      PopulateSeries();
+      PopulateSeries(repopulate: true);
       UpdateSelectedSeries(NOT_FOUND, _outputsSelectedSampleViewModel.SelectedSample);
 
+      PopulateEvidence();
+
+      Outputs.Annotations.Clear();
       ApplyOutputFilters();
 
       Outputs.ResetAllAxes();
       Outputs.InvalidatePlot(updateData: true);
     }
 
-    private void ObserveFilteredSamplesStateIsEnabled(object _)
+    private void ObserveOutputsStateObservationsReferences(object _)
+    {
+      PopulateEvidence();
+      Outputs.ResetAllAxes();
+      Outputs.InvalidatePlot(updateData: true);
+    }
+
+    private void ObserveModuleStateFilterConfig(object _)
     {
       Outputs.Annotations.Clear();
       ApplyOutputFilters();
@@ -293,7 +325,26 @@ namespace Sampling
 
     private void ObserveModuleStateOutputs(object _)
     {
-      PopulateOutputs();
+      if (Outputs.Series.Count == 0)
+      {
+        PopulateVerticalAxis();
+
+        PopulateSeries(repopulate: true);
+
+        PopulateEvidence();
+
+        Outputs.Annotations.Clear();
+        ApplyOutputFilters();
+
+        Outputs.ResetAllAxes();
+        Outputs.InvalidatePlot(updateData: true);
+
+        _outputsSelectedSampleViewModel.SelectedSample = NOT_FOUND;
+      }
+      else
+      {
+        PopulateSeries(repopulate: false);
+      }
     }
 
     private void ObserveModuleStateOutputFilters(object _)
@@ -307,12 +358,12 @@ namespace Sampling
     {
       PopulateVerticalAxis();
 
-      Outputs.Series.Clear();
-      Outputs.Annotations.Clear();
-
-      PopulateSeries();
+      PopulateSeries(repopulate: true);
       UpdateSelectedSeries(NOT_FOUND, _outputsSelectedSampleViewModel.SelectedSample);
-      
+
+      PopulateEvidence();
+
+      Outputs.Annotations.Clear();
       ApplyOutputFilters();
 
       Outputs.ResetAllAxes();
@@ -333,13 +384,31 @@ namespace Sampling
         ? _simulation.SimConfig.SimOutput.FindElement(outputName).AssertSome()
         : default;
 
-      var verticalAxis = Outputs.GetAxis(AxisPosition.Left).AssertNotNull();
+      var verticalAxis = Outputs.GetAxis(AxisPosition.Left);
       verticalAxis.Title = simValue.Name;
       verticalAxis.Unit = simValue.Unit;
     }
 
-    private void PopulateSeries()
+    private enum SerieType
     {
+      None,
+      DepVar,
+      Observations
+    }
+
+    private void PopulateSeries(bool repopulate)
+    {
+      var plottedOutputs = Outputs.Series
+        .Select(s => (Series: s, Meta: RequireInstanceOf<(int Index, SerieType SerieType)>(s.Tag)))
+        .Where(t => t.Meta.SerieType == SerieType.DepVar)
+        .ToArr();
+
+      if (repopulate)
+      {
+        plottedOutputs.Iter(po => Outputs.Series.Remove(po.Series));
+        plottedOutputs = default;
+      }
+
       var outputName = _selectedOutputName.IsFound()
         ? _outputNames[_selectedOutputName]
         : default;
@@ -348,16 +417,23 @@ namespace Sampling
       {
         var independentVariableName = _simulation.SimConfig.SimOutput.IndependentVariable.Name;
 
-        _moduleState.Outputs.Filter(t => t.Output != default).Iter(t =>
+        void PlotOutput((int, NumDataTable) t)
         {
-          var isPlotted = Outputs.Series.Any(s => RequireInstanceOf<int>(s.Tag) == t.Index);
-          if (isPlotted) return;
+          var (index, output) = t;
 
-          var independentData = t.Output[independentVariableName];
-          var dependentData = t.Output[outputName];
+          if (output is null) return;
+
+          if (!repopulate)
+          {
+            var isPlotted = plottedOutputs.Exists(po => po.Meta.Index == index);
+            if (isPlotted) return;
+          }
+
+          var independentData = output[independentVariableName];
+          var dependentData = output[outputName];
+          var seriesTitle = $"#{index + 1}";
 
           Series series;
-          var seriesTitle = $"#{t.Index + 1}";
 
           if (IsSeriesTypeLine)
           {
@@ -367,7 +443,8 @@ namespace Sampling
               StrokeThickness = 1,
               LineStyle = LineStyle.Solid,
               Color = Outputs.DefaultColors[Outputs.Series.Count % Outputs.DefaultColors.Count],
-              Tag = t.Index
+              RenderInLegend = false,
+              Tag = (index, SerieType.DepVar)
             };
 
             for (var row = 0; row < independentData.Length; ++row)
@@ -388,7 +465,8 @@ namespace Sampling
               MarkerType = MarkerType.Plus,
               MarkerStroke = Outputs.DefaultColors[Outputs.Series.Count % Outputs.DefaultColors.Count],
               MarkerSize = 1,
-              Tag = t.Index
+              RenderInLegend = false,
+              Tag = (index, SerieType.DepVar)
             };
 
             for (var row = 0; row < independentData.Length; ++row)
@@ -403,13 +481,55 @@ namespace Sampling
           }
 
           Outputs.Series.Add(series);
+        }
+
+        _moduleState.Outputs.Iter(PlotOutput);
+      }
+    }
+
+    private void PopulateEvidence()
+    {
+      var plottedObservations = Outputs.Series
+        .Select(s => (Series: s, Meta: RequireInstanceOf<(int Index, SerieType SerieType)>(s.Tag)))
+        .Where(t => t.Meta.SerieType == SerieType.Observations)
+        .ToArr();
+
+      plottedObservations.Iter(po => Outputs.Series.Remove(po.Series));
+
+      var verticalAxis = Outputs.Axes
+        .Find(a => a.Position == AxisPosition.Left)
+        .AssertSome("Missing vertical axis");
+
+      var outputName = _selectedOutputName.IsFound()
+        ? _outputNames[_selectedOutputName]
+        : default;
+
+      void PlotObservations(int index, string reference)
+      {
+        var maybeObservations = _appState.SimEvidence.GetObservations(reference);
+
+        maybeObservations.IfSome(o =>
+        {
+          if (o.Subject != outputName) return;
+
+          Outputs.AddScatterSeries(
+            index,
+            o.RefName,
+            o.X,
+            o.Y,
+            Outputs.DefaultColors,
+            verticalAxis.Key,
+            (NOT_FOUND, SerieType.Observations)
+            );
         });
       }
+
+      _moduleState.OutputsState.ObservationsReferences.Iter(PlotObservations);
     }
 
     private void ApplyOutputFilters()
     {
-      if (!_moduleState.FilteredSamplesState.IsEnabled)
+      if (!_moduleState.FilterConfig.IsEnabled)
       {
         foreach (var series in Outputs.Series)
         {
@@ -424,7 +544,8 @@ namespace Sampling
 
       foreach (var series in Outputs.Series)
       {
-        var index = RequireInstanceOf<int>(series.Tag);
+        var (index, serieType) = RequireInstanceOf<(int, SerieType)>(series.Tag);
+        if (serieType != SerieType.DepVar) continue;
         var filter = _moduleState.OutputFilters.Find(f => f.Index == index).AssertSome();
         series.IsVisible = filter.IsInFilteredSet;
       }
@@ -445,7 +566,7 @@ namespace Sampling
         theme.SecondaryLight.Color.B
         );
 
-      foreach (var filter in _moduleState.FilteredSamplesState.FilteredSampleStates)
+      foreach (var filter in _moduleState.FilterConfig.Filters)
       {
         if (!filter.IsEnabled) continue;
         if (filter.OutputName != outputName) continue;
@@ -455,9 +576,9 @@ namespace Sampling
           Type = LineAnnotationType.Vertical,
           X = independentData[filter.At],
           MinimumY = filter.From,
-          MaximumY = filter.To, 
-          Color = color, 
-          LineStyle = LineStyle.Solid, 
+          MaximumY = filter.To,
+          Color = color,
+          LineStyle = LineStyle.Solid,
           StrokeThickness = 3
         };
 
@@ -469,9 +590,18 @@ namespace Sampling
     {
       var didUpdate = false;
 
-      var seriesToUnselect = Outputs.Series.SingleOrDefault(s => (int)s.Tag == indexUnselect);
+      var series = Outputs.Series
+        .Select(s => (Series: s, Meta: RequireInstanceOf<(int Index, SerieType SerieType)>(s.Tag)))
+        .Where(t => t.Meta.SerieType == SerieType.DepVar)
+        .ToArr();
 
-      var seriesToSelect = Outputs.Series.SingleOrDefault(s => (int)s.Tag == indexSelect);
+      var seriesToUnselect = series
+        .Where(t => t.Meta.Index == indexUnselect)
+        .SingleOrDefault().Series;
+
+      var seriesToSelect = series
+        .Where(t => t.Meta.Index == indexSelect)
+        .SingleOrDefault().Series;
 
       if (seriesToUnselect == seriesToSelect) return didUpdate;
 
@@ -528,7 +658,7 @@ namespace Sampling
       return didUpdate;
     }
 
-    private void PopulateOutputs()
+    private void PopulateAll()
     {
       PopulateVerticalAxis();
 
@@ -544,8 +674,10 @@ namespace Sampling
           : OxyPalettes.Cool(_moduleState.Outputs.Count).Colors;
       }
 
-      PopulateSeries();
+      PopulateSeries(repopulate: true);
       ApplyOutputFilters();
+
+      PopulateEvidence();
 
       Outputs.ResetAllAxes();
       Outputs.InvalidatePlot(updateData: true);
@@ -568,11 +700,13 @@ namespace Sampling
       }
     }
 
+    private readonly IAppState _appState;
     private readonly IAppSettings _appSettings;
     private readonly ModuleState _moduleState;
     private readonly Simulation _simulation;
     private readonly OutputsSelectedSampleViewModel _outputsSelectedSampleViewModel;
     private readonly OutputsFilteredSamplesViewModel _outputsFilteredSamplesViewModel;
+    private readonly OutputsEvidenceViewModel _outputsEvidenceViewModel;
     private readonly IReactiveSafeInvoke _reactiveSafeInvoke;
     private readonly IDisposable _subscriptions;
     private bool _disposed = false;

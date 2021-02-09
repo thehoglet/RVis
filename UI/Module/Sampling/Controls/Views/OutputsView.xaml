@@ -54,7 +54,8 @@
     </Grid.ColumnDefinitions>
 
     <oxy:PlotView x:Name="_plotView" 
-                  Model="{Binding Outputs}" 
+                  Model="{Binding Outputs}"
+                  Controller="{Binding PlotController}"
                   Background="Transparent"
                   />
 
@@ -131,6 +132,10 @@
         <TabItem Header="Filter"
                  DataContext="{Binding OutputsFilteredSamplesViewModel}">
           <impl:OutputsFilteredSamplesView/>
+        </TabItem>
+        <TabItem Header="Evidence"
+                 DataContext="{Binding OutputsEvidenceViewModel}">
+          <impl:OutputsEvidenceView/>
         </TabItem>
       </TabControl>
 

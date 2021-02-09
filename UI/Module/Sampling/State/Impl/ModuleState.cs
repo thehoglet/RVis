@@ -28,22 +28,13 @@ namespace Sampling
     {
       public string? SelectedOutputName { get; set; }
       public bool IsSeriesTypeLine { get; set; }
-    }
-
-    private class _FilteredSampleStateDTO
-    {
-      public string? OutputName { get; set; }
-      public double From { get; set; }
-      public double To { get; set; }
-      public int At { get; set; }
-      public bool IsEnabled { get; set; }
+      public string[]? ObservationsReferences { get; set; }
     }
 
     private class _FilteredSamplesStateDTO
     {
       public bool IsEnabled { get; set; }
       public bool IsUnion { get; set; }
-      public _FilteredSampleStateDTO[]? FilteredSampleStates { get; set; }
     }
 
     private class _ParameterStateDTO
@@ -93,21 +84,12 @@ namespace Sampling
           OutputsState = new _OutputsStateDTO
           {
             SelectedOutputName = instance.OutputsState.SelectedOutputName,
-            IsSeriesTypeLine = instance.OutputsState.IsSeriesTypeLine
+            IsSeriesTypeLine = instance.OutputsState.IsSeriesTypeLine,
+            ObservationsReferences = instance.OutputsState.ObservationsReferences.ToArray()
           },
 
           FilteredSamplesStateDTO = new _FilteredSamplesStateDTO
           {
-            FilteredSampleStates = instance.FilteredSamplesState.FilteredSampleStates.Map(
-              fss => new _FilteredSampleStateDTO 
-              { 
-                At = fss.At,
-                From = fss.From, 
-                IsEnabled = fss.IsEnabled, 
-                OutputName = fss.OutputName, 
-                To = fss.To 
-              }).ToArray(),
-
             IsEnabled = instance.FilteredSamplesState.IsEnabled,
             IsUnion = instance.FilteredSamplesState.IsUnion
           },
@@ -115,7 +97,7 @@ namespace Sampling
           ParameterStates = instance.ParameterStates
           .Map(ps => new _ParameterStateDTO
           {
-            Name = ps.Name.AssertNotNull(),
+            Name = ps.Name,
             DistributionType = ps.DistributionType.ToString(),
             DistributionStates = Distribution.SerializeDistributions(ps.Distributions),
             IsSelected = ps.IsSelected
@@ -166,11 +148,7 @@ namespace Sampling
 
       OutputsState.SelectedOutputName = dto.OutputsState?.SelectedOutputName;
       OutputsState.IsSeriesTypeLine = dto.OutputsState?.IsSeriesTypeLine ?? false;
-
-      FilteredSamplesState.FilteredSampleStates = dto.FilteredSamplesStateDTO?.FilteredSampleStates?.Select(
-        fss => new FilteredSampleState(
-          fss.OutputName.AssertNotNull(), fss.From, fss.To, fss.At, fss.IsEnabled)
-        ).ToArr() ?? default;
+      OutputsState.ObservationsReferences = dto.OutputsState?.ObservationsReferences?.ToArr() ?? default;
 
       FilteredSamplesState.IsEnabled = dto.FilteredSamplesStateDTO?.IsEnabled ?? false;
 
@@ -197,6 +175,7 @@ namespace Sampling
           var createdOn = dto.SamplingDesign.FromDirectoryName();
           SamplingDesign = samplingDesigns.Load(createdOn);
           Samples = SamplingDesign.Samples;
+          FilterConfig = samplingDesigns.LoadFilterConfig(SamplingDesign);
         }
         catch (Exception) { /* logged elsewhere */ }
       }

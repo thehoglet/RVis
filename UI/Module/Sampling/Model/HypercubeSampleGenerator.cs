@@ -127,17 +127,11 @@ namespace Sampling
         .Filter(ps => ps.DistributionType != DistributionType.Invariant)
         .Map((i, ps) =>
         {
+          var (name, lower, upper, icdf) = parameterBounds[i];
+          RequireTrue(name == ps.Name);
+
           var samples = design[i].Data
-            .Select(d =>
-            {
-              var (name, lower, upper, icdf) = parameterBounds[i];
-              RequireTrue(name == ps.Name);
-
-              d = lower + d * (upper - lower);
-              d = icdf(d);
-
-              return d;
-            })
+            .Select(d => icdf(lower + d * (upper - lower)))
             .ToArray();
 
           return (ParameterState: ps, Samples: samples);

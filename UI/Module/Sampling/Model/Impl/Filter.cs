@@ -1,6 +1,6 @@
 ﻿namespace Sampling
 {
-  internal sealed record FilteredSampleState(
+  internal sealed record Filter(
     string OutputName,
     double From,
     double To,
